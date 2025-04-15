@@ -5,13 +5,10 @@ import (
 
 	"bitbucket.org/neiku/hlog"
 	"bitbucket.org/neiku/winornot"
-	"github.com/PureMature/starcli/cli"
-	"github.com/PureMature/starcli/config"
-	"github.com/PureMature/starcli/module/gum"
-	"github.com/PureMature/starcli/module/sys"
-	"github.com/PureMature/starcli/web"
-	"github.com/PureMature/starport/email"
-	"github.com/PureMature/starport/llm"
+	"github.com/1set/starcli/cli"
+	"github.com/1set/starcli/config"
+	"github.com/1set/starcli/module/sys"
+	"github.com/1set/starcli/web"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -54,7 +51,4 @@ func initLogger(level string) {
 	cli.SetLog(log)
 	web.SetLog(log)
 	sys.SetLog(log)
-	gum.SetLog(log)
-	email.SetLog(log)
-	llm.SetLog(log)
 }

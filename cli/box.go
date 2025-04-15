@@ -8,8 +8,8 @@ import (
 
 	"github.com/1set/gut/ystring"
 	"github.com/1set/starbox"
+	"github.com/1set/starcli/util"
 	"github.com/1set/starlet"
-	"github.com/PureMature/starcli/util"
 	"go.starlark.net/starlark"
 	"go.uber.org/atomic"
 )

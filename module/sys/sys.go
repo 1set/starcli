@@ -8,9 +8,9 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/1set/starcli/config"
 	"github.com/1set/starlet"
 	"github.com/1set/starlet/dataconv"
-	"github.com/PureMature/starcli/config"
 	"go.starlark.net/starlark"
 )
 

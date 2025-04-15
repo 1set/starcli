@@ -5,16 +5,13 @@ import (
 	"sort"
 
 	"github.com/1set/starbox"
+	"github.com/1set/starcli/config"
+	"github.com/1set/starcli/module/sys"
 	"github.com/1set/starlet"
-	"github.com/PureMature/starcli/config"
-	"github.com/PureMature/starcli/module/gum"
-	"github.com/PureMature/starcli/module/sys"
-	"github.com/PureMature/starport/charm/cacc"
-	"github.com/PureMature/starport/charm/cfs"
-	"github.com/PureMature/starport/charm/ckv"
-	"github.com/PureMature/starport/email"
-	"github.com/PureMature/starport/llm"
 	"github.com/samber/lo"
+	"github.com/starpkg/email"
+	"github.com/starpkg/gum"
+	"github.com/starpkg/llm"
 )
 
 var (
@@ -24,9 +21,6 @@ var (
 		gum.ModuleName,
 		email.ModuleName,
 		llm.ModuleName,
-		cacc.ModuleName,
-		ckv.ModuleName,
-		cfs.ModuleName,
 	}
 )
 
@@ -61,26 +55,21 @@ func loadCLIModuleByName(opts *BoxOpts, name string) (starlet.ModuleLoader, erro
 	case sys.ModuleName:
 		return sys.NewModule(opts.cmdArgs), nil
 	case gum.ModuleName:
-		return gum.NewModule(), nil
+		return gum.NewModule().LoadModule(), nil
 	case email.ModuleName:
-		return email.NewModuleWithGetter(
-			config.GetResendAPIKey,
-			config.GetSenderDomain,
+		return email.NewModuleWithConfig(
+			config.GetResendAPIKey(),
+			config.GetSenderDomain(),
 		).LoadModule(), nil
 	case llm.ModuleName:
-		return llm.NewModuleWithGetter(
-			config.GetOpenAIProvider,
-			config.GetOpenAIEndpoint,
-			config.GetOpenAIKey,
-			config.GetOpenAIGPTModel,
-			config.GetOpenAIDallEModel,
+		return llm.NewModuleWithConfig(
+			config.GetOpenAIProvider(),
+			config.GetOpenAIEndpoint(),
+			config.GetOpenAIKey(),
+			config.GetOpenAIGPTModel(),
+			config.GetOpenAIDallEModel(),
+			config.GetOpenAIAPIVersion(),
 		).LoadModule(), nil
-	case cacc.ModuleName:
-		return cacc.NewModule().LoadModule(), nil
-	case ckv.ModuleName:
-		return ckv.NewModule().LoadModule(), nil
-	case cfs.ModuleName:
-		return cfs.NewModule().LoadModule(), nil
 	default:
 		return nil, fmt.Errorf("unknown module: %s", name)
 	}

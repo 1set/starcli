@@ -57,3 +57,8 @@ func GetOpenAIGPTModel() string {
 func GetOpenAIDallEModel() string {
 	return viper.GetString("openai_dalle_model")
 }
+
+// GetOpenAIAPIVersion returns the OpenAI services API version from the configuration.
+func GetOpenAIAPIVersion() string {
+	return viper.GetString("openai_api_version")
+}

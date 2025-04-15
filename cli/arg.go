@@ -2,7 +2,7 @@ package cli
 
 import (
 	"github.com/1set/gut/ystring"
-	"github.com/PureMature/starcli/util"
+	"github.com/1set/starcli/util"
 	flag "github.com/spf13/pflag"
 )
 

@@ -9,8 +9,8 @@ import (
 
 	"github.com/1set/gut/ystring"
 	"github.com/1set/starbox"
-	"github.com/PureMature/starcli/config"
-	"github.com/PureMature/starcli/web"
+	"github.com/1set/starcli/config"
+	"github.com/1set/starcli/web"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/term"
 )
