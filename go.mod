@@ -66,7 +66,7 @@ require (
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spyzhov/ajson v0.9.6 // indirect
-	github.com/starpkg/base v0.0.3 // indirect
+	github.com/starpkg/base v0.0.4 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark v1.7.1 // indirect
