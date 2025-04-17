@@ -23,6 +23,7 @@
 
 # Go workspace file
 go.work
+go.work.sum
 
 ### JetBrains+all ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
@@ -213,4 +214,4 @@ $RECYCLE.BIN/
 /starcli*
 /*.yaml
 /*.star
-coverage.txt
+/coverage.*
