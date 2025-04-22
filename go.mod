@@ -16,6 +16,7 @@ require (
 	github.com/starpkg/email v0.0.0-20250415075545-73bb2a4f8ff1
 	github.com/starpkg/gum v0.0.0-20250415080224-30e6c1d24680
 	github.com/starpkg/llm v0.0.0-20250415075815-d8c9f227a4ca
+	github.com/starpkg/markdown v0.0.0-20250417141900-b7599bd10ed8
 	go.starlark.net v0.0.0-20240123142251-f86470692795
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
@@ -69,7 +70,8 @@ require (
 	github.com/starpkg/base v0.0.4 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	github.com/yuin/goldmark v1.7.1 // indirect
+	github.com/yuin/goldmark v1.7.10 // indirect
+	github.com/yuin/goldmark-emoji v1.0.5 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/exp v0.0.0-20231108232855-2478ac86f678 // indirect
 	golang.org/x/sync v0.8.0 // indirect
