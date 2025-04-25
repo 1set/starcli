@@ -9,6 +9,7 @@ import (
 	"github.com/1set/starcli/module/sys"
 	"github.com/1set/starlet"
 	"github.com/samber/lo"
+	"github.com/starpkg/cmd"
 	"github.com/starpkg/email"
 	"github.com/starpkg/gum"
 	"github.com/starpkg/llm"
@@ -23,6 +24,7 @@ var (
 		email.ModuleName,
 		llm.ModuleName,
 		markdown.ModuleName,
+		cmd.ModuleName,
 	}
 )
 
@@ -74,6 +76,8 @@ func loadCLIModuleByName(opts *BoxOpts, name string) (starlet.ModuleLoader, erro
 		).LoadModule(), nil
 	case markdown.ModuleName:
 		return markdown.NewModule().LoadModule(), nil
+	case cmd.ModuleName:
+		return cmd.NewModule().LoadModule(), nil
 	default:
 		return nil, fmt.Errorf("unknown module: %s", name)
 	}
