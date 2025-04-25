@@ -13,7 +13,7 @@ require (
 	github.com/samber/lo v1.39.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
-	github.com/starpkg/cmd v0.0.0-20250415075815-d8c9f227a4ca
+	github.com/starpkg/cmd v0.0.0-20250425100607-d888cab29278
 	github.com/starpkg/email v0.0.0-20250415075545-73bb2a4f8ff1
 	github.com/starpkg/gum v0.0.0-20250425062902-a4d09c2939a0
 	github.com/starpkg/llm v0.0.0-20250415075815-d8c9f227a4ca
@@ -25,6 +25,7 @@ require (
 )
 
 require (
+	bitbucket.org/creachadair/shell v0.0.8 // indirect
 	github.com/1set/starlight v0.1.2 // indirect
 	github.com/alecthomas/chroma/v2 v2.8.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
@@ -92,7 +93,5 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/starpkg/cmd => ../starpkg/cmd
 
 replace github.com/starpkg/email => ../starpkg/email

@@ -1,5 +1,7 @@
 bitbucket.org/ai69/colorlogo v0.1.1 h1:5XChDTGcnO7g7Poomv8sD2KR6mtEjNQzI0QE10Nia+Q=
 bitbucket.org/ai69/colorlogo v0.1.1/go.mod h1:opCygeOoMcE5aPB2AQenx2dEh6BgYD1WmmlJ3vbOTio=
+bitbucket.org/creachadair/shell v0.0.8 h1:3yM6JcAfaGWzjzcCamTblzSIWXm/YSs0PFGIzBm2HTo=
+bitbucket.org/creachadair/shell v0.0.8/go.mod h1:vINzudofoUXZSJ5tREgpy+Etyjsag3ait5WOWImEVZ0=
 bitbucket.org/neiku/hlog v0.1.2 h1:6E3Hk81Q7Gp7Q7uMKJUhrJTzzs8ciSUMaTKc1LuUVE8=
 bitbucket.org/neiku/hlog v0.1.2/go.mod h1:oEgNTj1NYXHX7PSlntW43/geboj4D6JlMMdkqCplsDU=
 bitbucket.org/neiku/winornot v0.0.4 h1:I3XCWgA5DP93Cy4Mip5UmUlboymnFvb18q9UU7gl9lo=
@@ -159,6 +161,8 @@ github.com/spyzhov/ajson v0.9.6 h1:iJRDaLa+GjhCDAt1yFtU/LKMtLtsNVKkxqlpvrHHlpQ=
 github.com/spyzhov/ajson v0.9.6/go.mod h1:a6oSw0MMb7Z5aD2tPoPO+jq11ETKgXUr2XktHdT8Wt8=
 github.com/starpkg/base v0.0.4 h1:B3P0SEzRyhbU2KGEMhcaQAj1faMGOZeaarwcC66fdEw=
 github.com/starpkg/base v0.0.4/go.mod h1:NV3OZtaqYEpYRTf3J5oW99DIVMYQl2Kz1moBJ93mws4=
+github.com/starpkg/cmd v0.0.0-20250425100607-d888cab29278 h1:jMLZP4ZPp5rKM/jDTlcgEd0KXtrz+FYtw8x5IHARODQ=
+github.com/starpkg/cmd v0.0.0-20250425100607-d888cab29278/go.mod h1:R9brkGHQJgwvDnaHsK0pa9IPPGIUb1CXYqx3+iXf2bU=
 github.com/starpkg/gum v0.0.0-20250425062902-a4d09c2939a0 h1:a1xWCW2X8AT7UEmEcNmbbdygnchZFbf3KmFFqr0DjYU=
 github.com/starpkg/gum v0.0.0-20250425062902-a4d09c2939a0/go.mod h1:qH7Q9pR23br03KVhv+nDETHCkrqIrALjoWtCq6Hygzs=
 github.com/starpkg/llm v0.0.0-20250415075815-d8c9f227a4ca h1:/IV1bVrduDJkcNPf8k56kuRTBFEm7rOkOloqG5XO1R0=
