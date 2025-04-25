@@ -14,7 +14,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
 	github.com/starpkg/cmd v0.0.0-20250425100607-d888cab29278
-	github.com/starpkg/email v0.0.0-20250415075545-73bb2a4f8ff1
+	github.com/starpkg/email v0.0.0-20250425123256-1c12cb719116
 	github.com/starpkg/gum v0.0.0-20250425062902-a4d09c2939a0
 	github.com/starpkg/llm v0.0.0-20250415075815-d8c9f227a4ca
 	github.com/starpkg/markdown v0.0.0-20250417141900-b7599bd10ed8
@@ -69,7 +69,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/psanford/memfs v0.0.0-20230130182539-4dbf7e3e865e // indirect
-	github.com/resend/resend-go/v2 v2.6.0 // indirect
+	github.com/resend/resend-go/v2 v2.11.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rodolfoag/gow32 v0.0.0-20160917004320-d95ff468acf8 // indirect
 	github.com/sashabaranov/go-openai v1.38.1 // indirect
@@ -93,5 +93,3 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/starpkg/email => ../starpkg/email
