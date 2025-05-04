@@ -13,11 +13,11 @@ require (
 	github.com/samber/lo v1.50.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
-	github.com/starpkg/cmd v0.0.0-20250425100607-d888cab29278
-	github.com/starpkg/email v0.0.0-20250425123256-1c12cb719116
-	github.com/starpkg/gum v0.0.0-20250425062902-a4d09c2939a0
-	github.com/starpkg/llm v0.0.0-20250415075815-d8c9f227a4ca
-	github.com/starpkg/markdown v0.0.0-20250417141900-b7599bd10ed8
+	github.com/starpkg/cmd v0.0.0-20250504183432-8bf94e3c79bb
+	github.com/starpkg/email v0.0.0-20250504181005-bd5c59dc69a3
+	github.com/starpkg/gum v0.0.0-20250504175443-582598b689a7
+	github.com/starpkg/llm v0.0.0-20250504180006-a8e801674bbb
+	github.com/starpkg/markdown v0.0.0-20250504182330-a76dbc09d06d
 	go.starlark.net v0.0.0-20240123142251-f86470692795
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
@@ -72,7 +72,7 @@ require (
 	github.com/resend/resend-go/v2 v2.11.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rodolfoag/gow32 v0.0.0-20160917004320-d95ff468acf8 // indirect
-	github.com/sashabaranov/go-openai v1.38.1 // indirect
+	github.com/sashabaranov/go-openai v1.39.1 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
@@ -80,8 +80,8 @@ require (
 	github.com/starpkg/base v0.0.4 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	github.com/yuin/goldmark v1.7.10 // indirect
-	github.com/yuin/goldmark-emoji v1.0.5 // indirect
+	github.com/yuin/goldmark v1.7.11 // indirect
+	github.com/yuin/goldmark-emoji v1.0.6 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/exp v0.0.0-20231108232855-2478ac86f678 // indirect
 	golang.org/x/net v0.19.0 // indirect
@@ -93,9 +93,3 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/starpkg/llm => ../starpkg/llm
-
-replace github.com/starpkg/email => ../starpkg/email
-
-replace github.com/starpkg/gum => ../starpkg/gum
