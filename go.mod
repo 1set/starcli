@@ -3,7 +3,7 @@ module github.com/1set/starcli
 go 1.18
 
 require (
-	bitbucket.org/ai69/colorlogo v0.1.1
+	bitbucket.org/ai69/colorlogo v0.1.3
 	bitbucket.org/neiku/hlog v0.1.2
 	bitbucket.org/neiku/winornot v0.0.4
 	github.com/1set/gut v0.0.0-20201117175203-a82363231997
@@ -14,9 +14,9 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
 	github.com/starpkg/cmd v0.0.0-20250504183432-8bf94e3c79bb
-	github.com/starpkg/email v0.0.0-20250504181005-bd5c59dc69a3
-	github.com/starpkg/gum v0.0.0-20250504175443-582598b689a7
-	github.com/starpkg/llm v0.0.0-20250504180006-a8e801674bbb
+	github.com/starpkg/email v0.0.0-20250510052426-e35d576c8e48
+	github.com/starpkg/gum v0.0.0-20250510052251-3d605fc6ba4f
+	github.com/starpkg/llm v0.0.0-20250510052828-ad20b1351071
 	github.com/starpkg/markdown v0.0.0-20250504182330-a76dbc09d06d
 	go.starlark.net v0.0.0-20240123142251-f86470692795
 	go.uber.org/atomic v1.11.0
