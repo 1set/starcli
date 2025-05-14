@@ -14,6 +14,7 @@ import (
 	"github.com/starpkg/gum"
 	"github.com/starpkg/llm"
 	"github.com/starpkg/markdown"
+	"github.com/starpkg/sqlite"
 )
 
 var (
@@ -25,6 +26,7 @@ var (
 		llm.ModuleName,
 		markdown.ModuleName,
 		cmd.ModuleName,
+		sqlite.ModuleName,
 	}
 )
 
@@ -78,6 +80,8 @@ func loadCLIModuleByName(opts *BoxOpts, name string) (starlet.ModuleLoader, erro
 		return markdown.NewModule().LoadModule(), nil
 	case cmd.ModuleName:
 		return cmd.NewModule().LoadModule(), nil
+	case sqlite.ModuleName:
+		return sqlite.NewModule().LoadModule(), nil
 	default:
 		return nil, fmt.Errorf("unknown module: %s", name)
 	}

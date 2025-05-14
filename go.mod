@@ -18,6 +18,7 @@ require (
 	github.com/starpkg/gum v0.0.0-20250510052251-3d605fc6ba4f
 	github.com/starpkg/llm v0.0.0-20250510052828-ad20b1351071
 	github.com/starpkg/markdown v0.0.0-20250504182330-a76dbc09d06d
+	github.com/starpkg/sqlite v0.0.0-20250514132517-c4f4c892bb62
 	go.starlark.net v0.0.0-20240123142251-f86470692795
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
@@ -53,6 +54,7 @@ require (
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/h2so5/here v0.0.0-20200815043652-5e14eb691fae // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -69,6 +71,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/psanford/memfs v0.0.0-20230130182539-4dbf7e3e865e // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/resend/resend-go/v2 v2.11.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rodolfoag/gow32 v0.0.0-20160917004320-d95ff468acf8 // indirect
@@ -77,19 +80,31 @@ require (
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spyzhov/ajson v0.9.6 // indirect
-	github.com/starpkg/base v0.0.4 // indirect
+	github.com/starpkg/base v0.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark v1.7.11 // indirect
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/exp v0.0.0-20231108232855-2478ac86f678 // indirect
-	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	lukechampine.com/uint128 v1.2.0 // indirect
+	modernc.org/cc/v3 v3.40.0 // indirect
+	modernc.org/ccgo/v3 v3.16.13 // indirect
+	modernc.org/libc v1.22.5 // indirect
+	modernc.org/mathutil v1.5.0 // indirect
+	modernc.org/memory v1.5.0 // indirect
+	modernc.org/opt v0.1.3 // indirect
+	modernc.org/sqlite v1.24.0 // indirect
+	modernc.org/strutil v1.1.3 // indirect
+	modernc.org/token v1.0.1 // indirect
 )
