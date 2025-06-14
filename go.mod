@@ -16,9 +16,9 @@ require (
 	github.com/starpkg/cmd v0.0.0-20250504183432-8bf94e3c79bb
 	github.com/starpkg/email v0.0.0-20250510052426-e35d576c8e48
 	github.com/starpkg/gum v0.0.0-20250510052251-3d605fc6ba4f
-	github.com/starpkg/llm v0.0.0-20250510052828-ad20b1351071
+	github.com/starpkg/llm v0.0.0-20250614053946-768e3352ab02
 	github.com/starpkg/markdown v0.0.0-20250504182330-a76dbc09d06d
-	github.com/starpkg/sqlite v0.0.0-20250514132517-c4f4c892bb62
+	github.com/starpkg/sqlite v0.0.0-20250614042714-407c1ff5036e
 	go.starlark.net v0.0.0-20240123142251-f86470692795
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
@@ -75,7 +75,7 @@ require (
 	github.com/resend/resend-go/v2 v2.11.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rodolfoag/gow32 v0.0.0-20160917004320-d95ff468acf8 // indirect
-	github.com/sashabaranov/go-openai v1.39.1 // indirect
+	github.com/sashabaranov/go-openai v1.40.1 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
