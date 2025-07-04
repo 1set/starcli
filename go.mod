@@ -19,6 +19,7 @@ require (
 	github.com/starpkg/llm v0.0.0-20250614053946-768e3352ab02
 	github.com/starpkg/markdown v0.0.0-20250504182330-a76dbc09d06d
 	github.com/starpkg/sqlite v0.0.0-20250614042714-407c1ff5036e
+	github.com/starpkg/web v0.0.0-00010101000000-000000000000
 	go.starlark.net v0.0.0-20240123142251-f86470692795
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
@@ -108,3 +109,5 @@ require (
 	modernc.org/strutil v1.1.3 // indirect
 	modernc.org/token v1.0.1 // indirect
 )
+
+replace github.com/starpkg/web => ../starpkg/web
