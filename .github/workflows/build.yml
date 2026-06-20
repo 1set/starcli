@@ -1,0 +1,30 @@
+name: Build
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+permissions: read-all
+
+jobs:
+  ci:
+    # Reusable CI lives in 1set/meta — the single source of truth for every
+    # Star* module's pipeline. Pinned to a commit SHA for supply-chain safety;
+    # bump the pin when meta's workflow changes (Dependabot github-actions can
+    # automate this).
+    uses: 1set/meta/.github/workflows/go-ci.yml@5d86667e7264f012655dab2644dfa44e09597445
+    with:
+      # Matches go.mod's floor. starcli aggregates starbox + the starpkg domain
+      # modules; the highest floor among the in-scope modules (email/markdown)
+      # is 1.22. The gum v2 / floor-1.25 bump is deferred to the isolated
+      # pre-release pin PR (per the "pin upgrade is the last PR" rule).
+      go-floor: "1.22"
+      # Test-coverage ratchet (covcheck). 0 = no gate: starcli ships with no
+      # tests yet; the CLI-R0 characterization-test PR seeds the suite and
+      # raises this floor just under the first authoritative CI number.
+      # starcli is a CLI application (not a starlark domain module), so the
+      # doc-coverage and footprint gates stay off (as on starbox).
+      cov-min: 0
+    secrets: inherit
