@@ -1,14 +1,17 @@
 package cli
 
-// Tests for the starbox v0.2.0 runtime wiring (CLI-01/M2): execution budgets
-// and RunError-classified exit codes. Reuses captureStd / baseArgs from
-// characterization_test.go (same package).
+// Tests for the starbox v0.2.0 runtime wiring: execution budgets and
+// RunError-classified exit codes (CLI-01/M2), and the --check validation mode
+// (CLI-02/C-5). Reuses captureStd / baseArgs from characterization_test.go.
 //
 // Sections:
 //   - exit-code classification (success / eval / syntax / compile)
 //   - execution budgets (--max-steps / --max-output)
+//   - check mode (--check: resolve without executing)
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -114,4 +117,99 @@ func TestBuildBox_BudgetsApplied(t *testing.T) {
 	if starbox.ClassifyRunError(err).Kind != starbox.RunErrorMaxSteps {
 		t.Errorf("expected RunErrorMaxSteps, got kind %v (%v)", starbox.ClassifyRunError(err).Kind, err)
 	}
+}
+
+// --- check mode (--check) -------------------------------------------------
+
+func TestProcess_Check(t *testing.T) {
+	t.Run("clean code passes", func(t *testing.T) {
+		a := baseArgs()
+		a.Check = true
+		a.CodeContent = `x = 1 + 2`
+		var code int
+		_, se := captureStd(t, func() { code = Process(a) })
+		if code != 0 {
+			t.Errorf("clean check: exit=%d want 0 (stderr=%q)", code, se)
+		}
+		if se != "" {
+			t.Errorf("clean check: unexpected diagnostics %q", se)
+		}
+	})
+
+	t.Run("clean code does NOT execute", func(t *testing.T) {
+		// --check must not run the script: a print produces no stdout.
+		a := baseArgs()
+		a.Check = true
+		a.OutputPrinter = "stdout"
+		a.CodeContent = `print("SHOULD-NOT-RUN")`
+		var code int
+		so, _ := captureStd(t, func() { code = Process(a) })
+		if code != 0 {
+			t.Errorf("check no-exec: exit=%d want 0", code)
+		}
+		if strings.Contains(so, "SHOULD-NOT-RUN") {
+			t.Errorf("check no-exec: the script executed (stdout=%q)", so)
+		}
+	})
+
+	t.Run("syntax error is reported", func(t *testing.T) {
+		a := baseArgs()
+		a.Check = true
+		a.CodeContent = `x = =`
+		var code int
+		_, se := captureStd(t, func() { code = Process(a) })
+		if code != 1 {
+			t.Errorf("syntax check: exit=%d want 1", code)
+		}
+		if !strings.Contains(se, "direct.star:1:") {
+			t.Errorf("syntax check: stderr %q missing a file:line diagnostic", se)
+		}
+	})
+
+	t.Run("undefined name is reported", func(t *testing.T) {
+		a := baseArgs()
+		a.Check = true
+		a.CodeContent = `y = undefined_xyz`
+		var code int
+		_, se := captureStd(t, func() { code = Process(a) })
+		if code != 1 {
+			t.Errorf("undefined check: exit=%d want 1", code)
+		}
+		if !strings.Contains(se, "undefined: undefined_xyz") {
+			t.Errorf("undefined check: stderr %q missing the diagnostic", se)
+		}
+	})
+
+	t.Run("file is checked with its real name", func(t *testing.T) {
+		dir := t.TempDir()
+		f := filepath.Join(dir, "thing.star")
+		if err := os.WriteFile(f, []byte("ok = 1\nbad = nope_name\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		a := baseArgs()
+		a.Check = true
+		a.Arguments = []string{f}
+		a.NumberOfArgs = 1
+		var code int
+		_, se := captureStd(t, func() { code = Process(a) })
+		if code != 1 {
+			t.Errorf("file check: exit=%d want 1", code)
+		}
+		if !strings.Contains(se, "thing.star:2:") {
+			t.Errorf("file check: stderr %q missing the real filename diagnostic", se)
+		}
+	})
+
+	t.Run("nothing to check", func(t *testing.T) {
+		a := baseArgs()
+		a.Check = true
+		var code int
+		_, se := captureStd(t, func() { code = Process(a) })
+		if code != 1 {
+			t.Errorf("empty check: exit=%d want 1", code)
+		}
+		if !strings.Contains(se, "nothing to check") {
+			t.Errorf("empty check: stderr %q missing the hint", se)
+		}
+	})
 }

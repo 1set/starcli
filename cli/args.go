@@ -26,6 +26,7 @@ type Args struct {
 	AllowNet            bool
 	AllowFS             bool
 	AllowCmd            bool
+	Check               bool
 }
 
 // ParseArgs parses command line arguments and returns the Args object.
@@ -50,6 +51,7 @@ func ParseArgs() *Args {
 	flag.BoolVar(&args.AllowNet, "allow-net", false, "grant network capability (http, net, email, llm; web/s3/sqlite also need --allow-fs)")
 	flag.BoolVar(&args.AllowFS, "allow-fs", false, "grant filesystem capability (file, path; web/s3/sqlite also need --allow-net)")
 	flag.BoolVar(&args.AllowCmd, "allow-cmd", false, "allow the cmd module to execute host commands (never granted by a tier)")
+	flag.BoolVar(&args.Check, "check", false, "syntax/resolve check the script (-c or file) without running it")
 	flag.Parse()
 
 	// keep the rest of arguments

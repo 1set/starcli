@@ -63,9 +63,10 @@ docker run -v $(pwd):/scripts starcli sh -c "/root/starcli /scripts/your-script.
 $ ./starcli -h
 Usage of ./starcli:
       --allow-cmd         allow the cmd module to execute host commands (never granted by a tier)
-      --allow-fs          allow modules that touch the filesystem (sqlite, file, path)
-      --allow-net         allow modules that open network connections (email, llm, web, s3, http, net)
+      --allow-fs          grant filesystem capability (file, path; web/s3/sqlite also need --allow-net)
+      --allow-net         grant network capability (http, net, email, llm; web/s3/sqlite also need --allow-fs)
       --caps string       capability tier: safe (default, no net/fs/cmd), network, full (default "safe")
+      --check             syntax/resolve check the script (-c or file) without running it
   -c, --code string       Starlark code to execute
   -C, --config string     config file to load
   -g, --globalreassign    allow reassigning global variables in Starlark code (default true)
@@ -168,6 +169,18 @@ Run with debug-level logging:
 
 ```bash
 $ ./starcli --log debug path/to/script.star
+```
+
+#### Check Without Running
+
+Syntax- and resolve-check a script without executing it (reports problems as
+`file:line:col: message`, non-zero exit on any problem):
+
+```bash
+$ ./starcli --check path/to/script.star
+$ ./starcli --check -c 'print(undefined_name)'
+direct.star:1:7: undefined: undefined_name
+check: 1 problem(s) found
 ```
 
 ## Configuration

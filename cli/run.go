@@ -126,6 +126,49 @@ func runScriptFile(args *Args) error {
 	return err
 }
 
+// runCheck resolves and type-checks the script WITHOUT executing it (CLI-02/C-5,
+// reusing starbox.Check), printing each problem as "file:line:col: message". It
+// builds the same box a real run would, so the check sees the configured modules
+// and the capability policy. Exit is non-zero when any problem is found.
+func runCheck(args *Args) error {
+	// resolve the script source: -c code, or the first file argument
+	var name, script string
+	switch {
+	case ystring.IsNotBlank(args.CodeContent):
+		name, script = "direct.star", args.CodeContent
+	case args.NumberOfArgs >= 1:
+		name = filepath.Base(args.Arguments[0])
+		bs, err := ioutil.ReadFile(args.Arguments[0])
+		if err != nil {
+			return err
+		}
+		script = string(bs)
+	default:
+		return errors.New("check: nothing to check (pass -c CODE or a file)")
+	}
+
+	opt := args.BasicBoxOpts()
+	opt.scenario = scenarioFile
+	opt.name = name
+	box, err := BuildBox(opt)
+	if err != nil {
+		return err
+	}
+
+	diags, err := box.Check(script)
+	if err != nil {
+		return err
+	}
+	if len(diags) == 0 {
+		return nil
+	}
+	for _, d := range diags {
+		d.File = name // Check labels diagnostics "box.star"; show the real name
+		fmt.Fprintln(os.Stderr, d.String())
+	}
+	return fmt.Errorf("check: %d problem(s) found", len(diags))
+}
+
 func showVersion(args *Args) error {
 	config.DisplayBuildInfo()
 	return nil
