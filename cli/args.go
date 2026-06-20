@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"github.com/1set/gut/ystring"
-	"github.com/1set/starcli/util"
 	flag "github.com/spf13/pflag"
 )
 
@@ -58,36 +56,4 @@ func (a *Args) BasicBoxOpts() *BoxOpts {
 		recursion:      a.AllowRecursion,
 		globalReassign: a.AllowGlobalReassign,
 	}
-}
-
-// Process processes the command line arguments and executes desired actions, it returns the exit code.
-func Process(args *Args) int {
-	// for basic checks
-	numArg := args.NumberOfArgs
-	useDirectCode := ystring.IsNotBlank(args.CodeContent)
-
-	// determine action
-	var action func(*Args) error
-	switch {
-	case args.ShowVersion:
-		action = showVersion
-	case args.WebPort > 0:
-		action = runWebServer
-	case useDirectCode:
-		action = runDirectCode
-	case numArg == 0:
-		action = runREPL
-	case numArg >= 1:
-		action = runScriptFile
-	default:
-		action = showHelp
-	}
-
-	// execute action
-	err := action(args)
-	if err != nil {
-		util.PrintError(err)
-		return 1
-	}
-	return 0
 }

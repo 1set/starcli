@@ -10,7 +10,9 @@ import (
 	"github.com/1set/gut/ystring"
 	"github.com/1set/starbox"
 	"github.com/1set/starcli/config"
+	"github.com/1set/starcli/util"
 	"github.com/1set/starcli/web"
+	"github.com/1set/starlet"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/term"
 )
@@ -132,4 +134,21 @@ func showVersion(args *Args) error {
 func showHelp(args *Args) error {
 	flag.Usage()
 	return nil
+}
+
+// genInspectCond creates a function for the Starbox runner to inspect the
+// result. In interactive mode it reports any error and keeps the box open;
+// otherwise it never holds the box open.
+func genInspectCond(inspect bool) starbox.InspectCondFunc {
+	if inspect {
+		return func(m starlet.StringAnyMap, err error) bool {
+			if err != nil {
+				util.PrintError(err)
+			}
+			return true
+		}
+	}
+	return func(starlet.StringAnyMap, error) bool {
+		return false
+	}
 }
