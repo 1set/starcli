@@ -30,7 +30,7 @@ export PACK=github.com/1set/starcli/config
 export FLAGS="-s -w -X '$(PACK).AppName=$(BINARY)' -X '$(PACK).BuildDate=`date '+%Y-%m-%dT%T%z'`' -X '$(PACK).BuildHost=`hostname`' -X '$(PACK).GoVersion=`go version`' -X '$(PACK).GitBranch=`git symbolic-ref -q --short HEAD`' -X '$(PACK).GitCommit=`git rev-parse --short HEAD`' -X '$(PACK).GitSummary=$${GIT_TAG_NAME:-`git describe --tags --dirty --always`}' -X '$(PACK).CIBuildNum=${BUILD_NUM}'"
 
 # commands
-.PHONY: default build build_linux build_mac build_windows run install
+.PHONY: default build build_linux build_mac build_windows run install ci test bench
 default:
 	@echo "build target is required for $(BINARY)"
 	@exit 1
@@ -53,9 +53,19 @@ run: build
 preview:
 	STAR_HOST_NAME=Aloha ./$(BINARY) --version --log debug
 
+# CI bar consumed by 1set/meta go-ci.yml: race + coverage profile (covcheck reads
+# coverage.txt) then bench compile. CGO is enabled for the race detector even
+# though release builds set CGO_ENABLED=0 above.
+ci:
+	CGO_ENABLED=1 $(GOTEST) -v -race -cover -covermode=atomic -coverprofile=coverage.txt -count 1 ./...
+	$(GOTEST) -v -parallel=4 -run="none" -benchtime="2s" -benchmem -bench=. ./...
+
 test:
 	CGO_ENABLED=1 $(GOTEST) -v -race -cover -covermode=atomic -coverprofile=coverage.txt -count 1 ./...
 	$(GOTEST) -parallel=4 -run="none" -benchtime="2s" -benchmem -bench=.
+
+bench:
+	$(GOTEST) -parallel=4 -run="none" -benchtime="2s" -benchmem -bench=. ./...
 
 install:
 ifndef GOBIN

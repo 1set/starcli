@@ -8,8 +8,8 @@ bitbucket.org/neiku/winornot v0.0.4 h1:I3XCWgA5DP93Cy4Mip5UmUlboymnFvb18q9UU7gl9
 bitbucket.org/neiku/winornot v0.0.4/go.mod h1:xzKlwxkpGIumHbxwUrB41kFIra8gz/ZZgJzltE3TArA=
 github.com/1set/gut v0.0.0-20201117175203-a82363231997 h1:za2jSkE1Rx56hTzBko3ZZ4gA/nq+rA/jVovWuAF4jyo=
 github.com/1set/gut v0.0.0-20201117175203-a82363231997/go.mod h1:DpCCAL0dgBMQdiqPUIIRpdU9zNcIZwJjW+L/8Mb30mw=
-github.com/1set/starbox v0.1.3-0.20260620013444-6a0e7ed0608a h1:Zgjl+lOc5tJDKP28aBAJ9gxlxL3t87fS87rCL6l02/s=
-github.com/1set/starbox v0.1.3-0.20260620013444-6a0e7ed0608a/go.mod h1:9OXM57bi3G9tGf/oxPo4rKAZFMHznHkFIROAusmNvBk=
+github.com/1set/starbox v0.2.0 h1:49VR41rprA0r5SBS2CQcwe1eRz/2WbmQ61J3RAPIzP4=
+github.com/1set/starbox v0.2.0/go.mod h1:9OXM57bi3G9tGf/oxPo4rKAZFMHznHkFIROAusmNvBk=
 github.com/1set/starlet v0.2.2 h1:TWEbuY5O3291GvRwxHLMiJCSGWhI1ZMdXe+nCtBejW0=
 github.com/1set/starlet v0.2.2/go.mod h1:3Sz9ToVkumS1OMojGmb37iLqd69UVTr1PWFOXaiC+rA=
 github.com/1set/starlight v0.2.0 h1:W9yulJYANolyMLMOH0M4xcW8RQVpi68opSdNmoipcic=
