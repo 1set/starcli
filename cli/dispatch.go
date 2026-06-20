@@ -34,6 +34,8 @@ func Process(args *Args) int {
 	switch {
 	case args.ShowVersion:
 		action = showVersion
+	case args.Check:
+		action = runCheck
 	case args.WebPort > 0:
 		action = runWebServer
 	case useDirectCode:
