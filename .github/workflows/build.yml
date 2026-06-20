@@ -21,10 +21,12 @@ jobs:
       # is 1.22. The gum v2 / floor-1.25 bump is deferred to the isolated
       # pre-release pin PR (per the "pin upgrade is the last PR" rule).
       go-floor: "1.22"
-      # Test-coverage ratchet (covcheck). 0 = no gate: starcli ships with no
-      # tests yet; the CLI-R0 characterization-test PR seeds the suite and
-      # raises this floor just under the first authoritative CI number.
-      # starcli is a CLI application (not a starlark domain module), so the
-      # doc-coverage and footprint gates stay off (as on starbox).
-      cov-min: 0
+      # Test-coverage ratchet (covcheck). The CLI-R0 characterization suite
+      # brought total statement coverage to ~69.5% (cli 68.9 / config 94.1 /
+      # util 92.7 / sys 77.8; main.go and web/ are the uncovered remainder).
+      # Floor set just below that, with headroom for platform variance; tighten
+      # as the M1 refactor and CLI-01 tests raise it. starcli is a CLI
+      # application (not a starlark domain module), so the doc-coverage and
+      # footprint gates stay off (as on starbox).
+      cov-min: 65
     secrets: inherit
