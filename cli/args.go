@@ -20,6 +20,8 @@ type Args struct {
 	InteractiveMode     bool
 	OutputPrinter       string
 	ConfigFile          string
+	MaxSteps            uint64
+	MaxOutput           uint
 }
 
 // ParseArgs parses command line arguments and returns the Args object.
@@ -38,6 +40,8 @@ func ParseArgs() *Args {
 	flag.BoolVarP(&args.InteractiveMode, "interactive", "i", false, "enter interactive mode after executing")
 	flag.StringVarP(&args.OutputPrinter, "output", "o", "auto", "output printer: none,stdout,stderr,basic,lineno,since,auto")
 	flag.StringVarP(&args.ConfigFile, "config", "C", "", "config file to load")
+	flag.Uint64Var(&args.MaxSteps, "max-steps", 0, "max Starlark execution steps per run, guards runaway loops (0=unlimited)")
+	flag.UintVar(&args.MaxOutput, "max-output", 0, "max top-level output entries per run (0=unlimited)")
 	flag.Parse()
 
 	// keep the rest of arguments
@@ -55,5 +59,7 @@ func (a *Args) BasicBoxOpts() *BoxOpts {
 		printerName:    a.OutputPrinter,
 		recursion:      a.AllowRecursion,
 		globalReassign: a.AllowGlobalReassign,
+		maxSteps:       a.MaxSteps,
+		maxOutput:      a.MaxOutput,
 	}
 }

@@ -26,6 +26,8 @@ type BoxOpts struct {
 	printerName    string
 	recursion      bool
 	globalReassign bool
+	maxSteps       uint64 // per-run Starlark step budget; 0 = unlimited
+	maxOutput      uint   // per-run top-level output entry cap; 0 = unlimited
 }
 
 // BuildBox creates a new Starbox with the given options.
@@ -35,11 +37,15 @@ func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
 	if ystring.IsNotBlank(opts.includePath) {
 		box.SetFS(os.DirFS(opts.includePath))
 	}
-	box.SetLogger(log) // it's a HACK here, since log is a global variable
-	box.GetMachine().SetOutputConversionEnabled(false)
 
-	// set inspect condition
+	// execution budgets (0 == unlimited): a step budget bounds runaway loops
+	// that a wall-clock timeout cannot stop; an output cap bounds result size.
+	box.SetMaxExecutionSteps(opts.maxSteps)
+	box.SetMaxOutputEntries(opts.maxOutput)
+
+	// machine-level knobs
 	mac := box.GetMachine()
+	mac.SetOutputConversionEnabled(false)
 	if opts.globalReassign {
 		mac.EnableGlobalReassign()
 	} else {
