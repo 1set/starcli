@@ -29,6 +29,7 @@ const modCmd = "cmd"
 // as privileged as its sharpest tool. sqlite/s3/web are dual-capability and so
 // require BOTH grants (or --caps full): they each cross the net<->fs line.
 var starpkgCaps = map[string]starlet.ModuleCapability{
+	"args":     starlet.CapPure,                            // argparse-style parsing of the captured argv
 	"markdown": starlet.CapPure,                            // goldmark render, no host effect
 	"sys":      starlet.CapProcess,                         // argv/platform/host + stdin
 	"gum":      starlet.CapProcess,                         // interactive terminal I/O
