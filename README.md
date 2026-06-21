@@ -75,7 +75,7 @@ Usage of ./starcli:
   -l, --log string        log level: debug, info, warn, error, dpanic, panic, fatal (default "info")
       --max-output uint   max top-level output entries per run (0=unlimited)
       --max-steps uint    max Starlark execution steps per run, guards runaway loops (0=unlimited)
-  -m, --module strings    allowed modules to preload and load (default [atom,base64,cmd,csv,email,file,go_idiomatic,gum,hashlib,http,json,llm,log,markdown,math,net,path,random,re,regex,runtime,s3,serial,sqlite,stats,string,struct,sys,time,web])
+  -m, --module strings    allowed modules to preload and load (default [args,atom,base64,cmd,csv,email,file,go_idiomatic,gum,hashlib,http,json,llm,log,markdown,math,net,path,random,re,regex,runtime,s3,serial,sqlite,stats,string,struct,sys,time,web])
   -o, --output string     output printer: none,stdout,stderr,basic,lineno,since,auto (default "auto")
   -r, --recursion         allow recursion in Starlark code
   -V, --version           print version & build information
@@ -175,6 +175,30 @@ Run with debug-level logging:
 
 ```bash
 $ ./starcli --log debug path/to/script.star
+```
+
+#### Parse Script Arguments
+
+The `args` module is an `argparse`-style parser for the script's own arguments
+(everything after `--`). `argv[0]` is the script name (or `-c`), like Python's
+`sys.argv`; `parse_args()` parses `argv[1:]`.
+
+```python
+load("args", "ArgumentParser")
+
+p = ArgumentParser(description = "greet someone")
+p.add_argument("--name", default = "World", help = "who to greet")
+p.add_argument("--count", type = int, default = 1)
+p.add_argument("--shout", action = "store_true")
+p.add_argument("file", help = "input file")
+
+ns = p.parse_args()
+print(ns.name, ns.count, ns.shout, ns.file)
+```
+
+```bash
+$ ./starcli greet.star -- --name Kevin --count 3 --shout in.txt
+Kevin 3 True in.txt
 ```
 
 #### Check Without Running

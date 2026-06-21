@@ -6,6 +6,7 @@ import (
 
 	"github.com/1set/starbox"
 	"github.com/1set/starcli/config"
+	"github.com/1set/starcli/module/args"
 	"github.com/1set/starcli/module/sys"
 	"github.com/1set/starlet"
 	"github.com/samber/lo"
@@ -22,6 +23,7 @@ import (
 var (
 	starMods = starlet.GetAllBuiltinModuleNames()
 	cliMods  = []string{
+		args.ModuleName,
 		sys.ModuleName,
 		gum.ModuleName,
 		email.ModuleName,
@@ -62,6 +64,8 @@ func loadModules(box *starbox.Starbox, opts *BoxOpts) error {
 
 func loadCLIModuleByName(opts *BoxOpts, name string) (starlet.ModuleLoader, error) {
 	switch name {
+	case args.ModuleName:
+		return args.NewModule(opts.cmdArgs), nil
 	case sys.ModuleName:
 		return sys.NewModule(opts.cmdArgs), nil
 	case gum.ModuleName:
