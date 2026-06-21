@@ -288,7 +288,7 @@ host_name: MyStarCLIServer
 
 ### Prerequisites
 
-- Go 1.22 or later
+- Go 1.25 or later
 
 ### Building
 
