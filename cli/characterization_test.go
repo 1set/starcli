@@ -294,12 +294,23 @@ func TestProcess_DirectCode_EvalError(t *testing.T) {
 	}
 }
 
-// NOTE: the pre-M2 "an unknown -m module errors at preload" behavior was
-// superseded by the CLI-01/M2 default-deny capability gate: an unknown or
-// withheld module is now dropped from the preload set (gated by the policy) and
-// only fails if a script actually load()s it. That behavior is covered in
-// capability_test.go; the loadCLIModuleByName error path stays unit-tested by
-// TestLoadCLIModuleByName above.
+func TestProcess_DirectCode_UnknownModule(t *testing.T) {
+	// Under the default (open) posture there is no load gate, so an unknown -m
+	// module reaches the dynamic loader and errors. (Under a restrictive tier
+	// the policy instead drops it from preload — see capability_test.go.)
+	a := baseArgs()
+	a.ModulesToLoad = []string{"no-such-module"}
+	a.CodeContent = `print(1)`
+
+	var code int
+	_, se := captureStd(t, func() { code = Process(a) })
+	if code != 1 {
+		t.Errorf("unknown module: exit=%d want 1", code)
+	}
+	if !strings.Contains(se, "unknown module: no-such-module") {
+		t.Errorf("unknown module: stderr %q missing the diagnostic", se)
+	}
+}
 
 func TestProcess_ScriptFile(t *testing.T) {
 	dir := t.TempDir()

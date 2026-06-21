@@ -6,11 +6,12 @@ import (
 	"github.com/1set/starlet"
 )
 
-// Capability classification for the default-deny load gate (CLI-01/M2). starcli
-// wires both starlet builtins and starpkg domain modules; a script may only
-// load a module whose capabilities the active flags permit. The default tier is
-// Safe: pure computation, logging, and process/runtime info — never the
-// network, the filesystem, or host command execution.
+// Capability classification for the opt-in capability load gate (CLI-01/M2).
+// starcli wires both starlet builtins and starpkg domain modules. The DEFAULT
+// posture is open — every wired module is loadable — so the CLI is convenient
+// out of the box. A host tightens it on purpose via --caps (safe|network|full)
+// / STAR_CAPS or the granular --allow-* flags; only then is a load gate
+// installed, admitting just the modules whose capabilities the grant permits.
 //
 // Capabilities reuse starlet.ModuleCapability bits so builtins and starpkg
 // modules are judged on one scale. starlet builtins are classified by
@@ -48,9 +49,21 @@ func moduleCaps(name string) (starlet.ModuleCapability, bool) {
 	return starlet.GetBuiltinModuleCapability(name)
 }
 
-// safeCaps is the default tier: pure computation (CapPure == 0), logging, and
-// process/runtime info. It deliberately excludes the network and the filesystem.
+// safeCaps is the most restrictive tier: pure computation (CapPure == 0),
+// logging, and process/runtime info — no network, no filesystem, no exec.
 const safeCaps = starlet.CapLog | starlet.CapProcess
+
+// allCaps is every non-exec capability bit (the "open"/"full" reach).
+const allCaps = safeCaps | starlet.CapNetwork | starlet.CapFileSystem
+
+// capTiers is the set of recognised --caps / STAR_CAPS values. "" resolves to
+// the default tier (open).
+var capTiers = map[string]bool{"": true, "open": true, "safe": true, "network": true, "full": true}
+
+// validCapsTier reports whether s names a recognised capability tier.
+func validCapsTier(s string) bool {
+	return capTiers[strings.ToLower(strings.TrimSpace(s))]
+}
 
 // capGrant is the set of capabilities a run permits, derived from the flags.
 type capGrant struct {
@@ -58,16 +71,22 @@ type capGrant struct {
 	allowCmd bool                     // host command execution (cmd), gated alone
 }
 
-// grantFromFlags builds a capGrant from the capability flags. The tier (--caps
-// safe|network|full) sets a baseline and the granular --allow-* flags widen it;
-// cmd is always gated by --allow-cmd alone.
+// grantFromFlags builds a capGrant from the capability flags. The tier sets a
+// baseline (the default — empty or "open" — is fully open, including exec) and
+// the granular --allow-* flags only widen it. Validate the tier with
+// validCapsTier before calling; an unrecognised value is treated as open here.
 func grantFromFlags(caps string, allowNet, allowFS, allowCmd bool) capGrant {
-	g := capGrant{caps: safeCaps, allowCmd: allowCmd}
+	g := capGrant{allowCmd: allowCmd}
 	switch strings.ToLower(strings.TrimSpace(caps)) {
+	case "safe":
+		g.caps = safeCaps
 	case "network":
-		g.caps |= starlet.CapNetwork
+		g.caps = safeCaps | starlet.CapNetwork
 	case "full":
-		g.caps |= starlet.CapNetwork | starlet.CapFileSystem
+		g.caps = allCaps
+	default: // "" or "open" (or, defensively, anything unrecognised) -> open
+		g.caps = allCaps
+		g.allowCmd = true
 	}
 	if allowNet {
 		g.caps |= starlet.CapNetwork
@@ -76,6 +95,12 @@ func grantFromFlags(caps string, allowNet, allowFS, allowCmd bool) capGrant {
 		g.caps |= starlet.CapFileSystem
 	}
 	return g
+}
+
+// unrestricted reports whether the grant permits everything (the default open
+// posture). A Box built under an unrestricted grant needs no load gate at all.
+func (g capGrant) unrestricted() bool {
+	return g.caps == allCaps && g.allowCmd
 }
 
 // moduleAllowed reports whether a module may load under this grant. cmd is gated

@@ -62,10 +62,10 @@ docker run -v $(pwd):/scripts starcli sh -c "/root/starcli /scripts/your-script.
 ```bash
 $ ./starcli -h
 Usage of ./starcli:
-      --allow-cmd         allow the cmd module to execute host commands (never granted by a tier)
-      --allow-fs          grant filesystem capability (file, path; web/s3/sqlite also need --allow-net)
-      --allow-net         grant network capability (http, net, email, llm; web/s3/sqlite also need --allow-fs)
-      --caps string       capability tier: safe (default, no net/fs/cmd), network, full (default "safe")
+      --allow-cmd         widen a restrictive tier with the cmd module (host command execution)
+      --allow-fs          widen a restrictive tier with filesystem modules (file, path)
+      --allow-net         widen a restrictive tier with network modules (http, net, email, llm)
+      --caps string       capability tier: open (default, everything) | full | network | safe; or env STAR_CAPS
       --check             syntax/resolve check the script (-c or file) without running it
   -c, --code string       Starlark code to execute
   -C, --config string     config file to load
@@ -84,41 +84,47 @@ Usage of ./starcli:
 
 ### Capabilities & sandboxing
 
-StarCLI runs scripts behind a **default-deny capability gate**: by default only
-the **Safe** tier loads — pure computation, logging, and process/runtime info
-(`math`, `json`, `string`, `sys`, `gum`, `markdown`, …). Modules that reach the
-network, the filesystem, or the host shell are **withheld** until you opt in:
+By default StarCLI runs **open** — every wired module is available, so scripts
+just work. To sandbox an untrusted script, **tighten** the capability tier with
+`--caps` (or the `STAR_CAPS` env var) and a default-deny load gate is installed:
 
-| flag | grants |
+| tier | loadable modules |
 |---|---|
-| _(default)_ `--caps safe` | pure / log / process modules only |
-| `--allow-net` (or `--caps network`) | network modules: `http`, `net`, `email`, `llm` |
-| `--allow-fs` | filesystem modules: `file`, `path` |
+| _(default)_ `open` | everything, including `cmd` (host command execution) |
 | `--caps full` | network **and** filesystem (but **not** `cmd`) |
-| `--allow-cmd` | the `cmd` module (host command execution) — never granted by a tier, even `full` |
+| `--caps network` | safe **+** network (`http`, `net`, `email`, `llm`) |
+| `--caps safe` | pure / log / process only (`math`, `json`, `sys`, `gum`, `markdown`, …) |
 
-A module is classified by the **union** of everything it can do, so the
-dual-capability modules — `web` (HTTP client **+** `static_dir`), `s3` (object
-storage **+** local file read/write), and `sqlite` (local DB **+** remote
-`connect_remote`) — require **both** `--allow-net` **and** `--allow-fs` (or just
-`--caps full`).
+From a restrictive tier the granular flags widen the grant: `--allow-net`,
+`--allow-fs`, and `--allow-cmd` (cmd is **never** granted by a tier — not even
+`full` — only by `--allow-cmd`). A module is classified by the **union** of
+everything it can do, so the dual-capability modules — `web` (HTTP **+**
+`static_dir`), `s3` (storage **+** local file R/W), `sqlite` (DB **+** remote
+`connect_remote`) — need **both** `--allow-net` and `--allow-fs` (or `--caps full`).
 
-A script that `load()`s a withheld module fails with a non-zero exit code (`4`
-for a withheld builtin). Execution budgets bound runaway scripts: `--max-steps`
-caps Starlark computation steps and `--max-output` caps a run's result size.
+Set a stricter default for a whole deployment with the env var:
 
 ```bash
-# default Safe: a network module is withheld
-$ ./starcli -c 'load("http", "get")'       # fails (exit 4)
+export STAR_CAPS=safe     # default every invocation to the safe tier
+```
 
-# opt in to the network
-$ ./starcli --allow-net -c 'load("http", "get"); print(get)'
+Under a restrictive tier, a script that `load()`s a withheld module fails with a
+non-zero exit code (`4` for a withheld builtin). Execution budgets bound runaway
+scripts: `--max-steps` caps Starlark computation steps and `--max-output` caps a
+run's result size.
 
-# web/s3/sqlite span net + fs, so they need both grants (or --caps full)
-$ ./starcli --caps full -c 'load("sqlite", "connect"); print(connect)'
+```bash
+# open by default: anything loads
+$ ./starcli -c 'load("http", "get"); print(get)'
 
-# host command execution requires its own explicit flag
-$ ./starcli --allow-cmd -c 'load("cmd", "run"); print(run("echo", "hi"))'
+# sandbox down to safe: a network module is now withheld
+$ ./starcli --caps safe -c 'load("http", "get")'       # fails (exit 4)
+
+# from safe, opt back into the network
+$ ./starcli --caps safe --allow-net -c 'load("http", "get"); print(get)'
+
+# host command execution always needs its own explicit flag
+$ ./starcli --caps safe --allow-cmd -c 'load("cmd", "run"); print(run("echo", "hi"))'
 ```
 
 ### Examples
