@@ -3,9 +3,13 @@ package cli
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"sync"
 
 	"github.com/1set/gut/ystring"
 	"github.com/1set/starbox"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type scenarioCode uint
@@ -27,6 +31,7 @@ type BoxOpts struct {
 	printerName    string
 	recursion      bool
 	globalReassign bool
+	logFile        string // if set, the script's log module writes here
 	maxSteps       uint64 // per-run Starlark step budget; 0 = unlimited
 	maxOutput      uint   // per-run top-level output entry cap; 0 = unlimited
 	caps           string // capability tier: safe (default) / network / full
@@ -54,6 +59,18 @@ func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
 		policy := starbox.Policy{Modules: starbox.ModuleAllow{Names: grant.allowedModules(getDefaultModules())}}
 		box = starbox.NewWithPolicy(opts.name, policy)
 	}
+
+	// Route the script's `log` module output to a file when requested (C-4):
+	// starbox uses the box logger for the log module, so a file-backed logger
+	// captures every log.* call at the interpreter level.
+	if opts.logFile != "" {
+		lg, err := fileLogger(opts.logFile)
+		if err != nil {
+			return nil, err
+		}
+		box.SetLogger(lg)
+	}
+
 	if ystring.IsNotBlank(opts.includePath) {
 		box.SetFS(os.DirFS(opts.includePath))
 	}
@@ -90,4 +107,36 @@ func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
 		return nil, err
 	}
 	return box, nil
+}
+
+var (
+	logFileMu      sync.Mutex
+	logFileLoggers = map[string]*zap.SugaredLogger{}
+)
+
+// fileLogger returns a zap logger that appends every level to path, memoized so
+// repeated BuildBox calls (e.g. one per web request) share a single open file
+// instead of leaking a descriptor each time. The parent directory is created if
+// needed; writes are synchronous, so no explicit flush is required.
+func fileLogger(path string) (*zap.SugaredLogger, error) {
+	logFileMu.Lock()
+	defer logFileMu.Unlock()
+	if lg, ok := logFileLoggers[path]; ok {
+		return lg, nil
+	}
+	if dir := filepath.Dir(path); dir != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return nil, fmt.Errorf("log file: %w", err)
+		}
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return nil, fmt.Errorf("log file: %w", err)
+	}
+	encCfg := zap.NewProductionEncoderConfig()
+	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	core := zapcore.NewCore(zapcore.NewConsoleEncoder(encCfg), zapcore.AddSync(f), zapcore.DebugLevel)
+	lg := zap.New(core).Sugar()
+	logFileLoggers[path] = lg
+	return lg, nil
 }

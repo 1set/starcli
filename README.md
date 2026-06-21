@@ -73,6 +73,7 @@ Usage of ./starcli:
   -I, --include string    include path for Starlark code to load modules from (default ".")
   -i, --interactive       enter interactive mode after executing
   -l, --log string        log level: debug, info, warn, error, dpanic, panic, fatal (default "info")
+      --log-file string   append the script's log module output to this file
       --max-output uint   max top-level output entries per run (0=unlimited)
       --max-steps uint    max Starlark execution steps per run, guards runaway loops (0=unlimited)
   -m, --module strings    allowed modules to preload and load (default [args,atom,base64,cmd,csv,email,file,go_idiomatic,gum,hashlib,http,json,llm,log,markdown,math,net,path,random,re,regex,runtime,s3,serial,sqlite,stats,string,struct,sys,time,web])
@@ -199,6 +200,25 @@ print(ns.name, ns.count, ns.shout, ns.file)
 ```bash
 $ ./starcli greet.star -- --name Kevin --count 3 --shout in.txt
 Kevin 3 True in.txt
+```
+
+#### Capture Logs to a File
+
+When a script uses the `log` module, `--log-file` routes all of its output to a
+file at the interpreter level (the parent directory is created if needed, and
+runs append):
+
+```python
+load("log", "info", "warn")
+info("starting up")
+warn("careful now")
+```
+
+```bash
+$ ./starcli --log-file run.log job.star
+$ cat run.log
+2026-06-21T17:32:07.373+0800    info    starting up
+2026-06-21T17:32:07.373+0800    warn    careful now
 ```
 
 #### Read Piped Input
