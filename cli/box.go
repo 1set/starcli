@@ -32,6 +32,7 @@ type BoxOpts struct {
 	recursion      bool
 	globalReassign bool
 	logFile        string // if set, the script's log module writes here
+	logFormat      string // log file encoding: "console" (default) or "json"
 	maxSteps       uint64 // per-run Starlark step budget; 0 = unlimited
 	maxOutput      uint   // per-run top-level output entry cap; 0 = unlimited
 	caps           string // capability tier: safe (default) / network / full
@@ -64,7 +65,7 @@ func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
 	// starbox uses the box logger for the log module, so a file-backed logger
 	// captures every log.* call at the interpreter level.
 	if opts.logFile != "" {
-		lg, err := fileLogger(opts.logFile)
+		lg, err := fileLogger(opts.logFile, opts.logFormat)
 		if err != nil {
 			return nil, err
 		}
@@ -119,7 +120,11 @@ var (
 // repeated BuildBox calls (e.g. one per web request) share a single open file
 // instead of leaking a descriptor each time. The parent directory is created if
 // needed; writes are synchronous, so no explicit flush is required.
-func fileLogger(path string) (*zap.SugaredLogger, error) {
+func fileLogger(path, format string) (*zap.SugaredLogger, error) {
+	enc, err := logEncoder(format)
+	if err != nil {
+		return nil, err
+	}
 	logFileMu.Lock()
 	defer logFileMu.Unlock()
 	if lg, ok := logFileLoggers[path]; ok {
@@ -134,13 +139,25 @@ func fileLogger(path string) (*zap.SugaredLogger, error) {
 	if err != nil {
 		return nil, fmt.Errorf("log file: %w", err)
 	}
-	encCfg := zap.NewProductionEncoderConfig()
-	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
-	core := zapcore.NewCore(zapcore.NewConsoleEncoder(encCfg), zapcore.AddSync(f), zapcore.DebugLevel)
+	core := zapcore.NewCore(enc, zapcore.AddSync(f), zapcore.DebugLevel)
 	lg := zap.New(core).Sugar()
 	logFileLoggers[path] = lg
 	logFileHandles[path] = f
 	return lg, nil
+}
+
+// logEncoder builds the zap encoder for the log file: human-readable "console"
+// (the default) or machine-readable "json".
+func logEncoder(format string) (zapcore.Encoder, error) {
+	encCfg := zap.NewProductionEncoderConfig()
+	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	switch format {
+	case "", "console":
+		return zapcore.NewConsoleEncoder(encCfg), nil
+	case "json":
+		return zapcore.NewJSONEncoder(encCfg), nil
+	}
+	return nil, fmt.Errorf("unknown --log-format %q (want console or json)", format)
 }
 
 // closeLogFiles flushes and closes every memoized log file. The process holds

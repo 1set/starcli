@@ -62,25 +62,27 @@ docker run -v $(pwd):/scripts starcli sh -c "/root/starcli /scripts/your-script.
 ```bash
 $ ./starcli -h
 Usage of ./starcli:
-      --allow-cmd         widen a restrictive tier with the cmd module (host command execution)
-      --allow-fs          widen a restrictive tier with filesystem modules (file, path)
-      --allow-net         widen a restrictive tier with network modules (http, net, email, llm)
-      --caps string       capability tier: open (default, everything) | full | network | safe; or env STAR_CAPS
-      --check             syntax/resolve check the script (-c or file) without running it
-  -c, --code string       Starlark code to execute
-  -C, --config string     config file to load
-  -g, --globalreassign    allow reassigning global variables in Starlark code (default true)
-  -I, --include string    include path for Starlark code to load modules from (default ".")
-  -i, --interactive       enter interactive mode after executing
-  -l, --log string        log level: debug, info, warn, error, dpanic, panic, fatal (default "info")
-      --log-file string   append the script's log module output to this file
-      --max-output uint   max top-level output entries per run (0=unlimited)
-      --max-steps uint    max Starlark execution steps per run, guards runaway loops (0=unlimited)
-  -m, --module strings    allowed modules to preload and load (default [args,atom,base64,cmd,csv,email,file,go_idiomatic,gum,hashlib,http,json,llm,log,markdown,math,net,path,random,re,regex,runtime,s3,serial,sqlite,stats,string,struct,sys,time,web])
-  -o, --output string     output printer: none,stdout,stderr,basic,lineno,since,auto (default "auto")
-  -r, --recursion         allow recursion in Starlark code
-  -V, --version           print version & build information
-  -w, --web uint16        run web server on specified port, it provides request and response structs for Starlark code to use
+      --allow-cmd           widen a restrictive tier with the cmd module (host command execution)
+      --allow-fs            widen a restrictive tier with filesystem modules (file, path)
+      --allow-net           widen a restrictive tier with network modules (http, net, email, llm)
+      --caps string         capability tier: open (default, everything) | full | network | safe; or env STAR_CAPS
+      --check               syntax/resolve check the script (-c or file) without running it
+  -c, --code string         Starlark code to execute
+  -C, --config string       config file to load
+  -g, --globalreassign      allow reassigning global variables in Starlark code (default true)
+  -I, --include string      include path for Starlark code to load modules from (default ".")
+  -i, --interactive         enter interactive mode after executing
+  -l, --log string          log level: debug, info, warn, error, dpanic, panic, fatal (default "info")
+      --log-file string     append the script's log module output to this file
+      --log-format string   log file format: console (human) or json (machine) (default "console")
+      --max-output uint     max top-level output entries per run (0=unlimited)
+      --max-steps uint      max Starlark execution steps per run, guards runaway loops (0=unlimited)
+  -m, --module strings      allowed modules to preload and load (default [args,atom,base64,cmd,csv,email,file,go_idiomatic,gum,hashlib,http,json,llm,log,markdown,math,net,path,random,re,regex,runtime,s3,serial,sqlite,stats,string,struct,sys,time,web])
+  -o, --output string       output printer: none,stdout,stderr,basic,lineno,since,auto (default "auto")
+      --record string       record the complete session output (stdout+stderr) to this transcript file
+  -r, --recursion           allow recursion in Starlark code
+  -V, --version             print version & build information
+  -w, --web uint16          run web server on specified port, it provides request and response structs for Starlark code to use
 ```
 
 ### Capabilities & sandboxing
@@ -219,6 +221,27 @@ $ ./starcli --log-file run.log job.star
 $ cat run.log
 2026-06-21T17:32:07.373+0800    info    starting up
 2026-06-21T17:32:07.373+0800    warn    careful now
+```
+
+Use `--log-format json` for machine-readable logs (structured fields included):
+
+```bash
+$ ./starcli --log-file run.log --log-format json job.star
+{"level":"info","ts":"2026-06-21T17:32:07.373+0800","msg":"starting up"}
+```
+
+#### Record a Session
+
+`--record` saves the **complete** session output — print output, results, REPL
+interaction and errors — to a transcript file (appended, with a timestamped
+session header), while still showing it live. Handy for replay and review.
+
+```bash
+$ ./starcli --record session.log job.star      # works in REPL mode too
+$ cat session.log
+
+===== starcli session 2026-06-21T17:43:24+08:00 =====
+... everything the run printed (stdout + stderr) ...
 ```
 
 #### Read Piped Input
