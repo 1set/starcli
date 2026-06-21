@@ -29,6 +29,7 @@ type Args struct {
 	AllowFS             bool
 	AllowCmd            bool
 	Check               bool
+	LogFile             string
 }
 
 // ParseArgs parses command line arguments and returns the Args object.
@@ -54,6 +55,7 @@ func ParseArgs() *Args {
 	flag.BoolVar(&args.AllowFS, "allow-fs", false, "widen a restrictive tier with filesystem modules (file, path)")
 	flag.BoolVar(&args.AllowCmd, "allow-cmd", false, "widen a restrictive tier with the cmd module (host command execution)")
 	flag.BoolVar(&args.Check, "check", false, "syntax/resolve check the script (-c or file) without running it")
+	flag.StringVar(&args.LogFile, "log-file", "", "append the script's log module output to this file")
 	flag.Parse()
 
 	// Capability tier resolution: an explicit --caps wins; otherwise fall back
@@ -78,6 +80,7 @@ func (a *Args) BasicBoxOpts() *BoxOpts {
 		printerName:    a.OutputPrinter,
 		recursion:      a.AllowRecursion,
 		globalReassign: a.AllowGlobalReassign,
+		logFile:        a.LogFile,
 		maxSteps:       a.MaxSteps,
 		maxOutput:      a.MaxOutput,
 		caps:           a.Caps,

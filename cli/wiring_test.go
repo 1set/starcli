@@ -119,6 +119,37 @@ func TestBuildBox_BudgetsApplied(t *testing.T) {
 	}
 }
 
+// --- log-file routing (--log-file) ----------------------------------------
+
+func TestProcess_LogFile(t *testing.T) {
+	// A script's log module output is routed to the --log-file at the
+	// interpreter level (nested directory auto-created).
+	dir := t.TempDir()
+	// Registered after TempDir so it runs first (LIFO): release the open handle
+	// before TempDir's RemoveAll, which on Windows cannot delete an open file.
+	t.Cleanup(closeLogFiles)
+	logPath := filepath.Join(dir, "logs", "run.log")
+	a := baseArgs()
+	a.LogFile = logPath
+	a.CodeContent = `load("log", "info"); info("captured-line")`
+
+	var code int
+	captureStd(t, func() { code = Process(a) })
+	if code != 0 {
+		t.Fatalf("log-file run: exit=%d want 0", code)
+	}
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read log file: %v", err)
+	}
+	if !strings.Contains(string(data), "captured-line") {
+		t.Errorf("log file missing the message: %q", string(data))
+	}
+	if !strings.Contains(string(data), "info") {
+		t.Errorf("log file missing the level: %q", string(data))
+	}
+}
+
 // --- check mode (--check) -------------------------------------------------
 
 func TestProcess_Check(t *testing.T) {
