@@ -46,7 +46,7 @@ func TestModuleAllowed(t *testing.T) {
 		// dual-capability modules (web/s3/sqlite) need BOTH net and fs, so a
 		// net-only grant does NOT admit them.
 		{network, "http", true}, {network, "email", true}, {network, "llm", true},
-		{network, "web", false}, {network, "s3", false}, {network, "sqlite", false},
+		{network, "web", false}, {network, "sqlite", false},
 		{network, "cmd", false},
 		{allowNet, "web", false}, {allowNet, "file", false},
 
@@ -56,7 +56,7 @@ func TestModuleAllowed(t *testing.T) {
 		{allowFS, "http", false}, {allowFS, "cmd", false},
 
 		// --allow-net + --allow-fs (or --caps full): the dual modules load.
-		{netFS, "web", true}, {netFS, "s3", true}, {netFS, "sqlite", true},
+		{netFS, "web", true}, {netFS, "sqlite", true},
 		{netFS, "cmd", false}, // still no exec
 
 		// Full: net + fs, but cmd still requires --allow-cmd.
@@ -65,7 +65,7 @@ func TestModuleAllowed(t *testing.T) {
 		{allowCmd, "cmd", true}, {allowCmd, "web", false}, // allow-cmd alone doesn't grant net
 
 		// Open (the default / empty tier): everything, including cmd.
-		{open, "web", true}, {open, "s3", true}, {open, "sqlite", true},
+		{open, "web", true}, {open, "sqlite", true},
 		{open, "http", true}, {open, "file", true}, {open, "cmd", true},
 		{openX, "cmd", true}, {openX, "web", true},
 		{open, "no-such-module", false}, // an unknown name is still not a module

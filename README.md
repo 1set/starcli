@@ -77,7 +77,7 @@ Usage of ./starcli:
       --log-format string   log file format: console (human) or json (machine) (default "console")
       --max-output uint     max top-level output entries per run (0=unlimited)
       --max-steps uint      max Starlark execution steps per run, guards runaway loops (0=unlimited)
-  -m, --module strings      allowed modules to preload and load (default [args,atom,base64,cmd,csv,email,file,go_idiomatic,gum,hashlib,http,json,llm,log,markdown,math,net,path,random,re,regex,runtime,s3,serial,sqlite,stats,string,struct,sys,time,web])
+  -m, --module strings      allowed modules to preload and load (default [args,atom,base64,cmd,csv,email,file,go_idiomatic,gum,hashlib,http,json,llm,log,markdown,math,net,path,random,re,regex,runtime,serial,sqlite,stats,string,struct,sys,time,web])
   -o, --output string       output printer: none,stdout,stderr,basic,lineno,since,auto (default "auto")
       --record string       record the complete session output (stdout+stderr) to this transcript file
   -r, --recursion           allow recursion in Starlark code
@@ -102,8 +102,8 @@ From a restrictive tier the granular flags widen the grant: `--allow-net`,
 `--allow-fs`, and `--allow-cmd` (cmd is **never** granted by a tier — not even
 `full` — only by `--allow-cmd`). A module is classified by the **union** of
 everything it can do, so the dual-capability modules — `web` (HTTP **+**
-`static_dir`), `s3` (storage **+** local file R/W), `sqlite` (DB **+** remote
-`connect_remote`) — need **both** `--allow-net` and `--allow-fs` (or `--caps full`).
+`static_dir`) and `sqlite` (DB **+** remote `connect_remote`) — need **both**
+`--allow-net` and `--allow-fs` (or `--caps full`).
 
 Set a stricter default for a whole deployment with the env var:
 
