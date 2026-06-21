@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/1set/gut/ystring"
@@ -34,14 +35,25 @@ type BoxOpts struct {
 	allowCmd       bool   // allow the cmd (host command execution) module
 }
 
-// BuildBox creates a new Starbox with the given options.
+// BuildBox creates a new Starbox with the given options. By default every wired
+// module is available (the open posture); a restrictive --caps tier / STAR_CAPS
+// or an --allow-* flag installs a capability load gate so only the permitted
+// modules may be loaded.
 func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
-	// create a new Starbox instance behind a default-deny capability load gate:
-	// only the modules the active capability flags permit may be loaded (the
-	// default Safe tier allows pure/log/process modules, never net/fs/cmd).
+	if !validCapsTier(opts.caps) {
+		return nil, fmt.Errorf("unknown --caps value %q (want: open, full, network, or safe)", opts.caps)
+	}
 	grant := grantFromFlags(opts.caps, opts.allowNet, opts.allowFS, opts.allowCmd)
-	policy := starbox.Policy{Modules: starbox.ModuleAllow{Names: grant.allowedModules(getDefaultModules())}}
-	box := starbox.NewWithPolicy(opts.name, policy)
+
+	var box *starbox.Starbox
+	if grant.unrestricted() {
+		// Default open posture: no load gate, every wired module is loadable.
+		box = starbox.New(opts.name)
+	} else {
+		// A tier/flag narrowed the grant: gate loading to the permitted set.
+		policy := starbox.Policy{Modules: starbox.ModuleAllow{Names: grant.allowedModules(getDefaultModules())}}
+		box = starbox.NewWithPolicy(opts.name, policy)
+	}
 	if ystring.IsNotBlank(opts.includePath) {
 		box.SetFS(os.DirFS(opts.includePath))
 	}

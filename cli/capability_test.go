@@ -1,12 +1,14 @@
 package cli
 
-// Tests for the CLI-01/M2 default-deny capability load gate. Reuses captureStd /
-// baseArgs from characterization_test.go (same package).
+// Tests for the CLI-01/M2 opt-in capability load gate (default open; tightened
+// via --caps / STAR_CAPS / --allow-*). Reuses captureStd / baseArgs from
+// characterization_test.go (same package).
 //
 // Sections:
 //   - grant logic (grantFromFlags + moduleAllowed) across tiers/flags
 //   - allowedModules filtering
-//   - end-to-end gating through Process (load allowed / withheld / cmd)
+//   - open default loads everything; invalid tier errors
+//   - end-to-end gating through Process under an explicit tier
 
 import (
 	"strings"
@@ -22,6 +24,8 @@ func TestModuleAllowed(t *testing.T) {
 	fullCmd := grantFromFlags("full", false, false, true)
 	allowCmd := grantFromFlags("safe", false, false, true)
 	netFS := grantFromFlags("safe", true, true, false) // --allow-net --allow-fs
+	open := grantFromFlags("", false, false, false)    // default/empty == open
+	openX := grantFromFlags("open", false, false, false)
 
 	cases := []struct {
 		grant capGrant
@@ -59,6 +63,12 @@ func TestModuleAllowed(t *testing.T) {
 		{full, "web", true}, {full, "sqlite", true}, {full, "cmd", false},
 		{fullCmd, "cmd", true},
 		{allowCmd, "cmd", true}, {allowCmd, "web", false}, // allow-cmd alone doesn't grant net
+
+		// Open (the default / empty tier): everything, including cmd.
+		{open, "web", true}, {open, "s3", true}, {open, "sqlite", true},
+		{open, "http", true}, {open, "file", true}, {open, "cmd", true},
+		{openX, "cmd", true}, {openX, "web", true},
+		{open, "no-such-module", false}, // an unknown name is still not a module
 	}
 	for _, c := range cases {
 		if got := c.grant.moduleAllowed(c.name); got != c.want {
@@ -80,6 +90,40 @@ func TestAllowedModules(t *testing.T) {
 	fullCmd := grantFromFlags("full", false, false, true).allowedModules(in)
 	if got := strings.Join(fullCmd, ","); got != "math,http,cmd,sqlite,sys" {
 		t.Errorf("full+cmd allowedModules=%v want all", fullCmd)
+	}
+}
+
+func TestProcess_OpenDefaultLoadsEverything(t *testing.T) {
+	// The default posture (no --caps, no STAR_CAPS) is open: net/fs/cmd modules
+	// load with no flag at all.
+	for _, code := range []string{
+		`load("http", "get"); print(type(get))`,
+		`load("cmd", "run"); print(type(run))`,
+		`load("sqlite", "connect"); print(type(connect))`,
+	} {
+		a := baseArgs() // Caps == "" -> open
+		a.OutputPrinter = "stdout"
+		a.CodeContent = code
+		var rc int
+		_, se := captureStd(t, func() { rc = Process(a) })
+		if rc != 0 {
+			t.Errorf("open default: %q exit=%d want 0 (stderr=%q)", code, rc, se)
+		}
+	}
+}
+
+func TestProcess_InvalidCapsErrors(t *testing.T) {
+	// A typo'd tier must fail loudly, never silently fall open.
+	a := baseArgs()
+	a.Caps = "saef"
+	a.CodeContent = `print(1)`
+	var rc int
+	_, se := captureStd(t, func() { rc = Process(a) })
+	if rc == 0 {
+		t.Errorf("invalid caps: expected non-zero exit")
+	}
+	if !strings.Contains(se, "unknown --caps value") {
+		t.Errorf("invalid caps: stderr %q missing the diagnostic", se)
 	}
 }
 
@@ -105,6 +149,7 @@ func TestProcess_CapabilityGate_EndToEnd(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			a := baseArgs()
 			a.OutputPrinter = "stdout"
+			a.Caps = "safe" // gate baseline; cases widen via setup
 			if c.setup != nil {
 				c.setup(a)
 			}

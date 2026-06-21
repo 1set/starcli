@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"os"
+
 	flag "github.com/spf13/pflag"
 )
 
@@ -47,12 +49,19 @@ func ParseArgs() *Args {
 	flag.StringVarP(&args.ConfigFile, "config", "C", "", "config file to load")
 	flag.Uint64Var(&args.MaxSteps, "max-steps", 0, "max Starlark execution steps per run, guards runaway loops (0=unlimited)")
 	flag.UintVar(&args.MaxOutput, "max-output", 0, "max top-level output entries per run (0=unlimited)")
-	flag.StringVar(&args.Caps, "caps", "safe", "capability tier: safe (default, no net/fs/cmd), network, full")
-	flag.BoolVar(&args.AllowNet, "allow-net", false, "grant network capability (http, net, email, llm; web/s3/sqlite also need --allow-fs)")
-	flag.BoolVar(&args.AllowFS, "allow-fs", false, "grant filesystem capability (file, path; web/s3/sqlite also need --allow-net)")
-	flag.BoolVar(&args.AllowCmd, "allow-cmd", false, "allow the cmd module to execute host commands (never granted by a tier)")
+	flag.StringVar(&args.Caps, "caps", "", "capability tier: open (default, everything) | full | network | safe; or env STAR_CAPS")
+	flag.BoolVar(&args.AllowNet, "allow-net", false, "widen a restrictive tier with network modules (http, net, email, llm)")
+	flag.BoolVar(&args.AllowFS, "allow-fs", false, "widen a restrictive tier with filesystem modules (file, path)")
+	flag.BoolVar(&args.AllowCmd, "allow-cmd", false, "widen a restrictive tier with the cmd module (host command execution)")
 	flag.BoolVar(&args.Check, "check", false, "syntax/resolve check the script (-c or file) without running it")
 	flag.Parse()
+
+	// Capability tier resolution: an explicit --caps wins; otherwise fall back
+	// to the STAR_CAPS env var; otherwise empty, which BuildBox treats as the
+	// default open tier.
+	if args.Caps == "" {
+		args.Caps = os.Getenv("STAR_CAPS")
+	}
 
 	// keep the rest of arguments
 	args.NumberOfArgs = flag.NArg()
