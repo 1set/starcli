@@ -15,7 +15,6 @@ import (
 	"github.com/starpkg/gum"
 	"github.com/starpkg/llm"
 	"github.com/starpkg/markdown"
-	"github.com/starpkg/s3"
 	"github.com/starpkg/sqlite"
 	"github.com/starpkg/web"
 )
@@ -32,7 +31,6 @@ var (
 		cmd.ModuleName,
 		sqlite.ModuleName,
 		web.ModuleName,
-		s3.ModuleName,
 	}
 )
 
@@ -92,8 +90,6 @@ func loadCLIModuleByName(opts *BoxOpts, name string) (starlet.ModuleLoader, erro
 		return sqlite.NewModule().LoadModule(), nil
 	case web.ModuleName:
 		return web.NewModule().LoadModule(), nil
-	case s3.ModuleName:
-		return s3.NewModule().LoadModule(), nil
 	// Add more modules as needed
 	default:
 		return nil, fmt.Errorf("unknown module: %s", name)

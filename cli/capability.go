@@ -26,7 +26,7 @@ const modCmd = "cmd"
 // starpkgCaps classifies the starpkg domain modules starcli wires. A module
 // absent here falls back to starlet.GetBuiltinModuleCapability.
 // A module's capability is the UNION of every builtin it exposes — a module is
-// as privileged as its sharpest tool. sqlite/s3/web are dual-capability and so
+// as privileged as its sharpest tool. sqlite/web are dual-capability and so
 // require BOTH grants (or --caps full): they each cross the net<->fs line.
 var starpkgCaps = map[string]starlet.ModuleCapability{
 	"args":     starlet.CapPure,                            // argparse-style parsing of the captured argv
@@ -36,7 +36,6 @@ var starpkgCaps = map[string]starlet.ModuleCapability{
 	"email":    starlet.CapNetwork,                         // Resend API
 	"llm":      starlet.CapNetwork,                         // OpenAI-compatible API
 	"web":      starlet.CapNetwork | starlet.CapFileSystem, // HTTP client + static_dir (serves a local dir)
-	"s3":       starlet.CapNetwork | starlet.CapFileSystem, // object storage API + put/get_object_file (local file R/W)
 	"sqlite":   starlet.CapFileSystem | starlet.CapNetwork, // local DB files + connect_remote (libsql/Turso over the network)
 	modCmd:     starlet.CapProcess,                         // classified, but gated by allowCmd — see capGrant.moduleAllowed
 }
