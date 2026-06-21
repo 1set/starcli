@@ -16,11 +16,11 @@ jobs:
     # automate this).
     uses: 1set/meta/.github/workflows/go-ci.yml@5d86667e7264f012655dab2644dfa44e09597445
     with:
-      # Matches go.mod's floor. starcli aggregates starbox + the starpkg domain
-      # modules; the highest floor among the in-scope modules (email/markdown)
-      # is 1.22. The gum v2 / floor-1.25 bump is deferred to the isolated
-      # pre-release pin PR (per the "pin upgrade is the last PR" rule).
-      go-floor: "1.22"
+      # Matches go.mod's floor. Consuming gum v0.2.0 (Charm v2, which declares
+      # go 1.25.8) raises the floor to 1.25 — the ecosystem's go-1.25 exception,
+      # so the matrix coincides with the latest-stable leg (there is no version
+      # in between to test).
+      go-floor: "1.25"
       # Test-coverage ratchet (covcheck). The CLI-R0 characterization suite
       # brought total statement coverage to ~69.5% (cli 68.9 / config 94.1 /
       # util 92.7 / sys 77.8; main.go and web/ are the uncovered remainder).
