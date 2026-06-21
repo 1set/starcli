@@ -150,6 +150,93 @@ func TestProcess_LogFile(t *testing.T) {
 	}
 }
 
+func TestProcess_LogFile_JSON(t *testing.T) {
+	dir := t.TempDir()
+	t.Cleanup(closeLogFiles)
+	logPath := filepath.Join(dir, "run.json")
+	a := baseArgs()
+	a.LogFile = logPath
+	a.LogFormat = "json"
+	a.CodeContent = `load("log", "info"); info("jsonline", n=7)`
+
+	var code int
+	captureStd(t, func() { code = Process(a) })
+	if code != 0 {
+		t.Fatalf("json log run: exit=%d want 0", code)
+	}
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read log file: %v", err)
+	}
+	for _, want := range []string{`"level":"info"`, `"msg":"jsonline"`, `"n":7`} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("json log %q missing %q", string(data), want)
+		}
+	}
+}
+
+func TestProcess_BadLogFormat(t *testing.T) {
+	a := baseArgs()
+	a.LogFile = filepath.Join(t.TempDir(), "x.log")
+	a.LogFormat = "yaml"
+	a.CodeContent = `print(1)`
+	var code int
+	_, se := captureStd(t, func() { code = Process(a) })
+	if code == 0 {
+		t.Errorf("bad log-format: expected non-zero exit")
+	}
+	if !strings.Contains(se, "unknown --log-format") {
+		t.Errorf("bad log-format: stderr %q missing the diagnostic", se)
+	}
+}
+
+// --- session recording (--record) -----------------------------------------
+
+func TestProcess_Record(t *testing.T) {
+	recPath := filepath.Join(t.TempDir(), "rec", "session.txt")
+	a := baseArgs()
+	a.OutputPrinter = "stdout"
+	a.Record = recPath
+	a.CodeContent = `print("recorded-line"); print(6 * 7)`
+
+	var code int
+	so, _ := captureStd(t, func() { code = Process(a) })
+	if code != 0 {
+		t.Fatalf("record run: exit=%d want 0", code)
+	}
+	// The output is still shown (tee'd to the original stdout)...
+	if !strings.Contains(so, "recorded-line") || !strings.Contains(so, "42") {
+		t.Errorf("record: stdout %q missing the live output", so)
+	}
+	// ...and captured to the transcript (with a session header).
+	data, err := os.ReadFile(recPath)
+	if err != nil {
+		t.Fatalf("read transcript: %v", err)
+	}
+	for _, want := range []string{"starcli session", "recorded-line", "42"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("transcript %q missing %q", string(data), want)
+		}
+	}
+}
+
+func TestProcess_Record_CapturesErrors(t *testing.T) {
+	recPath := filepath.Join(t.TempDir(), "err.txt")
+	a := baseArgs()
+	a.Record = recPath
+	a.CodeContent = `x = 1 // 0`
+
+	var code int
+	captureStd(t, func() { code = Process(a) })
+	if code != exitError {
+		t.Errorf("record error run: exit=%d want %d", code, exitError)
+	}
+	data, _ := os.ReadFile(recPath)
+	if !strings.Contains(string(data), "floored division by zero") {
+		t.Errorf("transcript %q missing the error", string(data))
+	}
+}
+
 // --- check mode (--check) -------------------------------------------------
 
 func TestProcess_Check(t *testing.T) {
