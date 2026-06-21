@@ -201,6 +201,25 @@ $ ./starcli greet.star -- --name Kevin --count 3 --shout in.txt
 Kevin 3 True in.txt
 ```
 
+#### Read Piped Input
+
+The `sys` module reads piped **data** from standard input (the script itself
+still comes from a file or `-c`). `sys.read()` returns all of stdin; `sys.lines()`
+is a **lazy** iterator (a large stream is not buffered whole); `sys.isatty()`
+tells interactive from piped input.
+
+```python
+load("sys", "lines")
+for line in lines():
+    print(line.upper())
+```
+
+```bash
+$ printf 'foo\nbar\n' | ./starcli upper.star
+FOO
+BAR
+```
+
 #### Check Without Running
 
 Syntax- and resolve-check a script without executing it (reports problems as

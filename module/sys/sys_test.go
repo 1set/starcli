@@ -7,6 +7,7 @@ package sys
 //   - input() reads and trims a line from stdin
 
 import (
+	"io"
 	"os"
 	"runtime"
 	"testing"
@@ -14,6 +15,65 @@ import (
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkstruct"
 )
+
+// withStdin redirects os.Stdin to a pipe carrying content for the duration of f.
+func withStdin(t *testing.T, content string, f func()) {
+	t.Helper()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	orig := os.Stdin
+	os.Stdin = r
+	defer func() { os.Stdin = orig }()
+	go func() { _, _ = io.WriteString(w, content); _ = w.Close() }()
+	f()
+}
+
+func TestStdinRead(t *testing.T) {
+	withStdin(t, "a\nb\nc\n", func() {
+		v, err := stdinRead(nil, starlark.NewBuiltin("sys.read", stdinRead), nil, nil)
+		if err != nil {
+			t.Fatalf("read: %v", err)
+		}
+		if v != starlark.String("a\nb\nc\n") {
+			t.Errorf("read()=%q want %q", v, "a\nb\nc\n")
+		}
+	})
+}
+
+func TestStdinLines(t *testing.T) {
+	withStdin(t, "foo\nbar\nbaz", func() { // no trailing newline on the last line
+		it := stdinLines{}.Iterate()
+		defer it.Done()
+		var got []string
+		var v starlark.Value
+		for it.Next(&v) {
+			got = append(got, string(v.(starlark.String)))
+		}
+		want := []string{"foo", "bar", "baz"}
+		if len(got) != len(want) {
+			t.Fatalf("lines()=%v want %v", got, want)
+		}
+		for i := range want {
+			if got[i] != want[i] {
+				t.Errorf("line %d=%q want %q", i, got[i], want[i])
+			}
+		}
+	})
+}
+
+func TestStdinIsatty(t *testing.T) {
+	withStdin(t, "data", func() {
+		v, err := stdinIsatty(nil, starlark.NewBuiltin("sys.isatty", stdinIsatty), nil, nil)
+		if err != nil {
+			t.Fatalf("isatty: %v", err)
+		}
+		if v != starlark.False { // a pipe is not a terminal
+			t.Errorf("isatty()=%v want False on a pipe", v)
+		}
+	})
+}
 
 func TestNewModule_Surface(t *testing.T) {
 	// WrapModuleData returns {ModuleName: *starlarkstruct.Module{Members: ...}};
@@ -56,6 +116,12 @@ func TestNewModule_Surface(t *testing.T) {
 	}
 	if fn.Name() != "sys.input" {
 		t.Errorf("input builtin name=%q want %q", fn.Name(), "sys.input")
+	}
+
+	for _, name := range []string{"read", "lines", "isatty"} {
+		if _, ok := m[name].(*starlark.Builtin); !ok {
+			t.Errorf("member %q is %T, want *starlark.Builtin", name, m[name])
+		}
 	}
 }
 
