@@ -124,7 +124,11 @@ func TestBuildBox_BudgetsApplied(t *testing.T) {
 func TestProcess_LogFile(t *testing.T) {
 	// A script's log module output is routed to the --log-file at the
 	// interpreter level (nested directory auto-created).
-	logPath := filepath.Join(t.TempDir(), "logs", "run.log")
+	dir := t.TempDir()
+	// Registered after TempDir so it runs first (LIFO): release the open handle
+	// before TempDir's RemoveAll, which on Windows cannot delete an open file.
+	t.Cleanup(closeLogFiles)
+	logPath := filepath.Join(dir, "logs", "run.log")
 	a := baseArgs()
 	a.LogFile = logPath
 	a.CodeContent = `load("log", "info"); info("captured-line")`

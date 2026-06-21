@@ -112,6 +112,7 @@ func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
 var (
 	logFileMu      sync.Mutex
 	logFileLoggers = map[string]*zap.SugaredLogger{}
+	logFileHandles = map[string]*os.File{}
 )
 
 // fileLogger returns a zap logger that appends every level to path, memoized so
@@ -138,5 +139,21 @@ func fileLogger(path string) (*zap.SugaredLogger, error) {
 	core := zapcore.NewCore(zapcore.NewConsoleEncoder(encCfg), zapcore.AddSync(f), zapcore.DebugLevel)
 	lg := zap.New(core).Sugar()
 	logFileLoggers[path] = lg
+	logFileHandles[path] = f
 	return lg, nil
+}
+
+// closeLogFiles flushes and closes every memoized log file. The process holds
+// them open for its lifetime (the OS closes them on exit), so this exists for
+// tests, which must release the handle before the temp dir can be removed
+// (notably on Windows, where an open file cannot be deleted).
+func closeLogFiles() {
+	logFileMu.Lock()
+	defer logFileMu.Unlock()
+	for path, f := range logFileHandles {
+		_ = f.Sync()
+		_ = f.Close()
+		delete(logFileHandles, path)
+		delete(logFileLoggers, path)
+	}
 }
