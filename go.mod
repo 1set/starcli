@@ -3,10 +3,6 @@ module github.com/1set/starcli
 go 1.25.8
 
 require (
-	bitbucket.org/ai69/colorlogo v0.1.3
-	bitbucket.org/neiku/hlog v0.1.2
-	bitbucket.org/neiku/winornot v0.0.4
-	github.com/1set/gut v0.0.0-20201117175203-a82363231997
 	github.com/1set/starbox v0.2.0
 	github.com/1set/starlet v0.2.2
 	github.com/kyokomi/emoji/v2 v2.2.13
@@ -30,16 +26,19 @@ require (
 	go.starlark.net v0.0.0-20260324133313-ffb3f39dd27a
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
+	golang.org/x/sys v0.45.0
 	golang.org/x/term v0.31.0
 )
 
 require (
+	bitbucket.org/ai69/colorlogo v0.1.3 // indirect
 	bitbucket.org/creachadair/shell v0.0.8 // indirect
 	charm.land/bubbles/v2 v2.0.0 // indirect
 	charm.land/bubbletea/v2 v2.0.2 // indirect
 	charm.land/glamour/v2 v2.0.1 // indirect
 	charm.land/huh/v2 v2.0.3 // indirect
 	charm.land/lipgloss/v2 v2.0.4 // indirect
+	github.com/1set/gut v0.0.0-20201117175203-a82363231997 // indirect
 	github.com/1set/starlight v0.2.0 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
@@ -74,7 +73,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/gonutz/w32 v1.0.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/h2so5/here v0.0.0-20200815043652-5e14eb691fae // indirect
@@ -104,7 +102,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/resend/resend-go/v2 v2.11.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/rodolfoag/gow32 v0.0.0-20160917004320-d95ff468acf8 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/sashabaranov/go-openai v1.41.2 // indirect
@@ -126,12 +123,10 @@ require (
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect

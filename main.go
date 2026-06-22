@@ -9,14 +9,13 @@ import (
 	// ("runs anywhere") instead of depending on host tz data.
 	_ "time/tzdata"
 
-	"bitbucket.org/neiku/hlog"
-	"bitbucket.org/neiku/winornot"
 	"github.com/1set/starcli/cli"
 	"github.com/1set/starcli/config"
 	"github.com/1set/starcli/module/sys"
 	"github.com/1set/starcli/web"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -25,7 +24,7 @@ var (
 
 func init() {
 	// fix for Windows terminal output
-	winornot.EnableANSIControl()
+	enableANSIControl()
 }
 
 func main() {
@@ -46,12 +45,26 @@ func main() {
 }
 
 func initLogger(level string) {
-	// build root logger
-	lg := hlog.NewSimpleLogger()
-	if err := lg.SetLevelString(level); err != nil {
-		lg.Error(err)
+	// build the root console logger (stderr), keeping diagnostics off stdout
+	lvl := zapcore.InfoLevel
+	if err := lvl.Set(level); err != nil {
+		lvl = zapcore.InfoLevel
 	}
-	log = lg.SugaredLogger.With(zap.Int("pid", os.Getpid()))
+	encCfg := zapcore.EncoderConfig{
+		TimeKey:        "ts",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.CapitalColorLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.StringDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
+	core := zapcore.NewCore(zapcore.NewConsoleEncoder(encCfg), zapcore.Lock(os.Stderr), lvl)
+	log = zap.New(core).Sugar().With(zap.Int("pid", os.Getpid()))
 
 	// set log for sub-packages
 	cli.SetLog(log)

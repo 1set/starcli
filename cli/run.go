@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/1set/gut/ystring"
 	"github.com/1set/starbox"
 	"github.com/1set/starcli/config"
 	"github.com/1set/starcli/util"
@@ -23,7 +23,7 @@ func runWebServer(args *Args) error {
 		runner        = starbox.NewRunConfig()
 		webPort       = args.WebPort
 		numArg        = args.NumberOfArgs
-		useDirectCode = ystring.IsNotBlank(args.CodeContent)
+		useDirectCode = strings.TrimSpace(args.CodeContent) != ""
 	)
 
 	// prepare runner
@@ -134,7 +134,7 @@ func runCheck(args *Args) error {
 	// resolve the script source: -c code, or the first file argument
 	var name, script string
 	switch {
-	case ystring.IsNotBlank(args.CodeContent):
+	case strings.TrimSpace(args.CodeContent) != "":
 		name, script = "direct.star", args.CodeContent
 	case args.NumberOfArgs >= 1:
 		name = filepath.Base(args.Arguments[0])

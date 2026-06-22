@@ -3,11 +3,8 @@ package config
 import (
 	_ "embed"
 	"fmt"
+	"runtime"
 	"strings"
-
-	cl "bitbucket.org/ai69/colorlogo"
-	"github.com/1set/gut/yos"
-	"github.com/1set/gut/ystring"
 )
 
 // revive:disable:exported
@@ -29,25 +26,18 @@ var (
 
 // DisplayBuildInfo prints the build information to the console.
 func DisplayBuildInfo() {
-	// is on master
-	onMaster := GitBranch == "master" || GitBranch == "main" || GitBranch == ""
-
 	// write logo
 	var sb strings.Builder
-	if onMaster {
-		sb.WriteString(cl.AnamnisarByColumn(logoArt))
-	} else {
-		sb.WriteString(cl.OceanSandByColumn(logoArt))
-	}
-	sb.WriteString(ystring.NewLine)
+	sb.WriteString(colorizeLogo(logoArt))
+	sb.WriteString("\n")
 
 	// inline helpers
 	arrow := "✰ "
-	if yos.IsOnWindows() {
+	if runtime.GOOS == "windows" {
 		arrow = "> "
 	}
 	addNonBlankField := func(name, value string) {
-		if ystring.IsNotBlank(value) {
+		if strings.TrimSpace(value) != "" {
 			fmt.Fprintln(&sb, arrow+name+":", value)
 		}
 	}
@@ -61,4 +51,14 @@ func DisplayBuildInfo() {
 	addNonBlankField("GitSummary", GitSummary)
 
 	fmt.Println(sb.String())
+}
+
+// colorizeLogo renders the logo art with a per-line ANSI 256-colour gradient.
+func colorizeLogo(art string) string {
+	palette := []int{45, 44, 43, 49, 48, 84, 78, 79} // teal → green gradient
+	var sb strings.Builder
+	for i, line := range strings.Split(strings.TrimRight(art, "\n"), "\n") {
+		fmt.Fprintf(&sb, "\x1b[38;5;%dm%s\x1b[0m\n", palette[i%len(palette)], line)
+	}
+	return sb.String()
 }
