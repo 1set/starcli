@@ -3,8 +3,8 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strings"
 
-	"github.com/1set/gut/ystring"
 	"github.com/1set/starbox"
 	"github.com/1set/starcli/util"
 )
@@ -37,7 +37,7 @@ func Process(args *Args) int {
 
 	// for basic checks
 	numArg := args.NumberOfArgs
-	useDirectCode := ystring.IsNotBlank(args.CodeContent)
+	useDirectCode := strings.TrimSpace(args.CodeContent) != ""
 
 	// determine action
 	var action func(*Args) error

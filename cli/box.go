@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
-	"github.com/1set/gut/ystring"
 	"github.com/1set/starbox"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -77,7 +77,7 @@ func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
 		box.SetLogger(lg)
 	}
 
-	if ystring.IsNotBlank(opts.includePath) {
+	if strings.TrimSpace(opts.includePath) != "" {
 		box.SetFS(os.DirFS(opts.includePath))
 	}
 
