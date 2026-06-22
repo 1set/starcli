@@ -39,6 +39,8 @@ type BoxOpts struct {
 	allowNet       bool   // widen the grant with network modules
 	allowFS        bool   // widen the grant with filesystem modules
 	allowCmd       bool   // allow the cmd (host command execution) module
+	dangerous      bool   // --dangerously-allow-all: open everything + run any command
+	execCmd        bool   // derived from the grant: construct cmd ENABLED (allow-all)
 }
 
 // BuildBox creates a new Starbox with the given options. By default every wired
@@ -49,7 +51,10 @@ func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
 	if !validCapsTier(opts.caps) {
 		return nil, fmt.Errorf("unknown --caps value %q (want: open, full, network, or safe)", opts.caps)
 	}
-	grant := grantFromFlags(opts.caps, opts.allowNet, opts.allowFS, opts.allowCmd)
+	grant := grantFromFlags(opts.caps, opts.allowNet, opts.allowFS, opts.allowCmd, opts.dangerous)
+	// The cmd loader (loadCLIModuleByName) constructs an enabled allow-all module
+	// only when the grant permits execution; otherwise cmd loads disabled.
+	opts.execCmd = grant.execCmd
 
 	var box *starbox.Starbox
 	if grant.unrestricted() {

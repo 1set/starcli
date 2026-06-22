@@ -73,17 +73,33 @@ func validCapsTier(s string) bool {
 }
 
 // capGrant is the set of capabilities a run permits, derived from the flags.
+//
+// Two distinct cmd levers: allowCmd lets the cmd module LOAD; execCmd decides
+// whether it is constructed ENABLED (run any command) or disabled (run() errors,
+// which() still works). Command EXECUTION is off in the open posture and turns
+// on only when the operator explicitly opts in with --allow-cmd or
+// --dangerously-allow-all — so a no-flag run can never spawn a process.
 type capGrant struct {
 	caps     starlet.ModuleCapability // permitted capability bits
-	allowCmd bool                     // host command execution (cmd), gated alone
+	allowCmd bool                     // the cmd module may load
+	execCmd  bool                     // cmd is enabled (allow-all) — run() executes
 }
 
 // grantFromFlags builds a capGrant from the capability flags. The tier sets a
-// baseline (the default — empty or "open" — is fully open, including exec) and
-// the granular --allow-* flags only widen it. Validate the tier with
+// capability baseline (the default — empty or "open" — opens net/fs); the
+// granular --allow-* flags only widen it. --allow-cmd both loads and ENABLES the
+// cmd module; --dangerously-allow-all is the one-flag "open everything, run any
+// command" escape hatch that overrides the tier. Validate the tier with
 // validCapsTier before calling; an unrecognised value is treated as open here.
-func grantFromFlags(caps string, allowNet, allowFS, allowCmd bool) capGrant {
-	g := capGrant{allowCmd: allowCmd}
+func grantFromFlags(caps string, allowNet, allowFS, allowCmd, dangerous bool) capGrant {
+	if dangerous {
+		// One flag opens every capability AND enables host command execution of
+		// ANY command — the sharpest posture, for fully trusted scripts only.
+		return capGrant{caps: allCaps, allowCmd: true, execCmd: true}
+	}
+	// --allow-cmd both lets cmd load and enables execution; without it the open
+	// posture still loads cmd but run() stays disabled (execCmd false).
+	g := capGrant{allowCmd: allowCmd, execCmd: allowCmd}
 	switch strings.ToLower(strings.TrimSpace(caps)) {
 	case "safe":
 		g.caps = safeCaps
@@ -93,7 +109,7 @@ func grantFromFlags(caps string, allowNet, allowFS, allowCmd bool) capGrant {
 		g.caps = allCaps
 	default: // "" or "open" (or, defensively, anything unrecognised) -> open
 		g.caps = allCaps
-		g.allowCmd = true
+		g.allowCmd = true // cmd still LOADS by default (which() works); run() needs execCmd
 	}
 	if allowNet {
 		g.caps |= starlet.CapNetwork

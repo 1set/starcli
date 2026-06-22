@@ -28,6 +28,7 @@ type Args struct {
 	AllowNet            bool
 	AllowFS             bool
 	AllowCmd            bool
+	Dangerous           bool
 	Check               bool
 	LogFile             string
 	LogFormat           string
@@ -55,7 +56,8 @@ func ParseArgs() *Args {
 	flag.StringVar(&args.Caps, "caps", "", "capability tier: open (default, everything) | full | network | safe; or env STAR_CAPS")
 	flag.BoolVar(&args.AllowNet, "allow-net", false, "widen a restrictive tier with network modules (http, net, email, llm)")
 	flag.BoolVar(&args.AllowFS, "allow-fs", false, "widen a restrictive tier with filesystem modules (file, path)")
-	flag.BoolVar(&args.AllowCmd, "allow-cmd", false, "widen a restrictive tier with the cmd module (host command execution)")
+	flag.BoolVar(&args.AllowCmd, "allow-cmd", false, "enable the cmd module to run ANY host command (no allowlist); also widens a restrictive tier")
+	flag.BoolVar(&args.Dangerous, "dangerously-allow-all", false, "DANGER: open everything — network + filesystem + host command execution of ANY command. Use only with fully trusted scripts.")
 	flag.BoolVar(&args.Check, "check", false, "syntax/resolve check the script (-c or file) without running it")
 	flag.StringVar(&args.LogFile, "log-file", "", "append the script's log module output to this file")
 	flag.StringVar(&args.LogFormat, "log-format", "console", "log file format: console (human) or json (machine)")
@@ -92,5 +94,6 @@ func (a *Args) BasicBoxOpts() *BoxOpts {
 		allowNet:       a.AllowNet,
 		allowFS:        a.AllowFS,
 		allowCmd:       a.AllowCmd,
+		dangerous:      a.Dangerous,
 	}
 }

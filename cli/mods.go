@@ -101,6 +101,13 @@ func loadCLIModuleByName(opts *BoxOpts, name string) (starlet.ModuleLoader, erro
 	case markdown.ModuleName:
 		return markdown.NewModule().LoadModule(), nil
 	case cmd.ModuleName:
+		// Command execution is off unless the operator opted in (--allow-cmd or
+		// --dangerously-allow-all → execCmd). Enabled means allow-all: any command
+		// runs (still argv-only + input-hardened by the cmd module). Otherwise the
+		// module loads disabled — which() works, run() returns a clear error.
+		if opts.execCmd {
+			return cmd.NewModuleWithAllowAll().LoadModule(), nil
+		}
 		return cmd.NewModule().LoadModule(), nil
 	case sqlite.ModuleName:
 		return sqlite.NewModule().LoadModule(), nil
