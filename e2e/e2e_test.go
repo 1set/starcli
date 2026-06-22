@@ -110,3 +110,52 @@ func TestGolden(t *testing.T) {
 		})
 	}
 }
+
+// TestDomainModuleIntegration proves the offline-testable domain modules
+// actually *do their job* through the CLI — not merely that they load. sqlite
+// runs a real local CRUD round-trip, markdown renders HTML, and gum's headless
+// table renders without a TTY.
+func TestDomainModuleIntegration(t *testing.T) {
+	cases := []struct {
+		name   string
+		args   []string
+		outSub []string // stdout must contain each of these
+	}{
+		{
+			name: "sqlite local CRUD round-trip",
+			args: []string{"-c", `
+load("sqlite", "connect")
+db = connect(":memory:")
+db.execute("CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT)")
+db.insert("t", {"name": "Ada"})
+print(db.query("SELECT name FROM t")[0]["name"])
+db.close()
+`},
+			outSub: []string{"Ada"},
+		},
+		{
+			name:   "markdown renders HTML",
+			args:   []string{"-c", `load("markdown", "convert"); print(convert(text="# Hi"))`},
+			outSub: []string{"<h1", "Hi</h1>"},
+		},
+		{
+			name:   "gum table renders headless",
+			args:   []string{"-c", `load("gum", "table"); print(table(["Name"], [["Ada"]]))`},
+			outSub: []string{"Name", "Ada"},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			so, se, exit := runCLI(t, "", c.args...)
+			if exit != 0 {
+				t.Fatalf("exit=%d, want 0 (stdout=%q stderr=%q)", exit, so, se)
+			}
+			for _, sub := range c.outSub {
+				if !strings.Contains(so, sub) {
+					t.Errorf("stdout=%q missing %q", so, sub)
+				}
+			}
+		})
+	}
+}
