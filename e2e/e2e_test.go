@@ -86,6 +86,10 @@ func TestGolden(t *testing.T) {
 		// --check validates without running:
 		{name: "check valid does not run", args: []string{"--check", "-c", `print("RAN")`}, notOut: "RAN", wantExit: 0},
 		{name: "check invalid is non-zero", args: []string{"--check", "-c", `x =`}, wantExit: anyNonZero},
+		// named time zones resolve via the embedded IANA tzdata (no host
+		// /usr/share/zoneinfo needed — see main.go's time/tzdata import):
+		{name: "named timezone is valid", args: []string{"-c", `load("time","is_valid_timezone"); print(is_valid_timezone("America/New_York"))`}, wantOut: "True\n", wantExit: 0},
+		{name: "named timezone converts", args: []string{"-c", `load("time","parse_time"); print(parse_time("2021-03-22T12:00:00Z").in_location("America/New_York").hour)`}, wantOut: "8\n", wantExit: 0},
 	}
 
 	for _, c := range cases {

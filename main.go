@@ -2,6 +2,12 @@ package main
 
 import (
 	"os"
+	// Embed the IANA time-zone database into the binary so named zones
+	// (time.parse_time location=, in_location, is_valid_timezone) resolve even
+	// when the host has no /usr/share/zoneinfo — i.e. minimal/scratch/distroless
+	// containers and slimmed binaries. Costs ~450 KB; keeps the CLI portable
+	// ("runs anywhere") instead of depending on host tz data.
+	_ "time/tzdata"
 
 	"bitbucket.org/neiku/hlog"
 	"bitbucket.org/neiku/winornot"
