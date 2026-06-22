@@ -1,0 +1,85 @@
+# GoReleaser configuration for starcli — cross-platform prebuilt binaries so the
+# CLI can be installed without a Go toolchain. Validate/iterate locally with:
+#   go run github.com/goreleaser/goreleaser/v2@latest check
+#   go run github.com/goreleaser/goreleaser/v2@latest release --snapshot --clean --skip=publish
+# Releases are produced on a vX.Y.Z tag by .github/workflows/release.yml.
+version: 2
+
+project_name: starcli
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: starcli
+    main: .
+    binary: starcli
+    # modernc/sqlite is pure Go, so the whole binary builds with CGO disabled —
+    # which is what makes static, cross-compiled binaries possible here.
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    # Inject the same version vars the Makefile sets (package config), so the
+    # released binary's `--version` banner is populated.
+    ldflags:
+      - -s -w
+      - -X github.com/1set/starcli/config.AppName=starcli
+      - -X github.com/1set/starcli/config.GitSummary={{ .Version }}
+      - -X github.com/1set/starcli/config.GitCommit={{ .ShortCommit }}
+      - -X github.com/1set/starcli/config.GitBranch={{ .Branch }}
+      - -X github.com/1set/starcli/config.BuildDate={{ .Date }}
+
+archives:
+  - id: starcli
+    ids:
+      - starcli
+    # tar.gz everywhere, zip on Windows.
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- if eq .Os "darwin" }}macOS{{ else }}{{ .Os }}{{ end }}_{{ .Arch }}
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot-{{ .ShortCommit }}"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^\\[doc\\]"
+      - "^\\[ci\\]"
+      - "^\\[test\\]"
+      - "^\\[chore\\]"
+      - "merge conflict"
+      - "Merge pull request"
+      - "Merge branch"
+
+release:
+  github:
+    owner: 1set
+    name: starcli
+  # Match the existing release style: explicit, not auto-prerelease.
+  prerelease: auto
+  draft: false
+  mode: keep-existing
