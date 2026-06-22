@@ -10,10 +10,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// Start starts a web server on the given port, builds and runs a Starbox instance for each request.
-func Start(port uint16, builder func() *starbox.RunnerConfig) error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+// handler builds the per-request HTTP handler. Each request builds and runs a
+// fresh Starbox (via builder) with `request` and `response` injected as globals;
+// the script populates `response`, which is then written back. A runtime error
+// becomes a 500 carrying the error text. It is split out of Start so it can be
+// exercised with httptest without binding a port.
+func handler(builder func() *starbox.RunnerConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		// prepare envs
 		resp := shttp.NewServerResponse()
 		mac := builder().KeyValueMap(starlet.StringAnyMap{
@@ -41,7 +44,13 @@ func Start(port uint16, builder func() *starbox.RunnerConfig) error {
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte(err.Error()))
 		}
-	})
+	}
+}
+
+// Start starts a web server on the given port, builds and runs a Starbox instance for each request.
+func Start(port uint16, builder func() *starbox.RunnerConfig) error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handler(builder))
 
 	log.Infow("web server started", "port", port)
 	err := http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
