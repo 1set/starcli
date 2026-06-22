@@ -14,7 +14,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
 	github.com/starpkg/cache v0.1.0
-	github.com/starpkg/cmd v0.1.0
+	github.com/starpkg/cmd v0.1.1
 	github.com/starpkg/email v0.1.0
 	github.com/starpkg/emoji v0.1.0
 	github.com/starpkg/gum v0.2.0

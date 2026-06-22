@@ -63,27 +63,28 @@ docker run -v $(pwd):/scripts starcli sh -c "/root/starcli /scripts/your-script.
 ```bash
 $ ./starcli -h
 Usage of ./starcli:
-      --allow-cmd           widen a restrictive tier with the cmd module (host command execution)
-      --allow-fs            widen a restrictive tier with filesystem modules (file, path)
-      --allow-net           widen a restrictive tier with network modules (http, net, email, llm)
-      --caps string         capability tier: open (default, everything) | full | network | safe; or env STAR_CAPS
-      --check               syntax/resolve check the script (-c or file) without running it
-  -c, --code string         Starlark code to execute
-  -C, --config string       config file to load
-  -g, --globalreassign      allow reassigning global variables in Starlark code (default true)
-  -I, --include string      include path for Starlark code to load modules from (default ".")
-  -i, --interactive         enter interactive mode after executing
-  -l, --log string          log level: debug, info, warn, error, dpanic, panic, fatal (default "info")
-      --log-file string     append the script's log module output to this file
-      --log-format string   log file format: console (human) or json (machine) (default "console")
-      --max-output uint     max top-level output entries per run (0=unlimited)
-      --max-steps uint      max Starlark execution steps per run, guards runaway loops (0=unlimited)
-  -m, --module strings      allowed modules to preload and load (default [args,atom,base64,cache,cmd,csv,email,emoji,file,go_idiomatic,gum,hashlib,http,json,liquid,llm,log,markdown,math,net,path,qrcode,random,re,regex,runtime,serial,sqlite,stats,string,struct,sys,time,toml,totp,web,yaml])
-  -o, --output string       output printer: none,stdout,stderr,basic,lineno,since,auto (default "auto")
-      --record string       record the complete session output (stdout+stderr) to this transcript file
-  -r, --recursion           allow recursion in Starlark code
-  -V, --version             print version & build information
-  -w, --web uint16          run web server on specified port, it provides request and response structs for Starlark code to use
+      --allow-cmd               enable the cmd module to run ANY host command (no allowlist); also widens a restrictive tier
+      --allow-fs                widen a restrictive tier with filesystem modules (file, path)
+      --allow-net               widen a restrictive tier with network modules (http, net, email, llm)
+      --caps string             capability tier: open (default, everything) | full | network | safe; or env STAR_CAPS
+      --check                   syntax/resolve check the script (-c or file) without running it
+  -c, --code string             Starlark code to execute
+  -C, --config string           config file to load
+      --dangerously-allow-all   DANGER: open everything — network + filesystem + host command execution of ANY command. Use only with fully trusted scripts.
+  -g, --globalreassign          allow reassigning global variables in Starlark code (default true)
+  -I, --include string          include path for Starlark code to load modules from (default ".")
+  -i, --interactive             enter interactive mode after executing
+  -l, --log string              log level: debug, info, warn, error, dpanic, panic, fatal (default "info")
+      --log-file string         append the script's log module output to this file
+      --log-format string       log file format: console (human) or json (machine) (default "console")
+      --max-output uint         max top-level output entries per run (0=unlimited)
+      --max-steps uint          max Starlark execution steps per run, guards runaway loops (0=unlimited)
+  -m, --module strings          allowed modules to preload and load (default [args,atom,base64,cache,cmd,csv,email,emoji,file,go_idiomatic,gum,hashlib,http,json,liquid,llm,log,markdown,math,net,path,qrcode,random,re,regex,runtime,serial,sqlite,stats,string,struct,sys,time,toml,totp,web,yaml])
+  -o, --output string           output printer: none,stdout,stderr,basic,lineno,since,auto (default "auto")
+      --record string           record the complete session output (stdout+stderr) to this transcript file
+  -r, --recursion               allow recursion in Starlark code
+  -V, --version                 print version & build information
+  -w, --web uint16              run web server on specified port, it provides request and response structs for Starlark code to use
 ```
 
 ### Capabilities & sandboxing
@@ -94,17 +95,25 @@ just work. To sandbox an untrusted script, **tighten** the capability tier with
 
 | tier | loadable modules |
 |---|---|
-| _(default)_ `open` | everything, including `cmd` (host command execution) |
+| _(default)_ `open` | everything loadable; `cmd` loads but command **execution** stays off until `--allow-cmd` |
 | `--caps full` | network **and** filesystem (but **not** `cmd`) |
 | `--caps network` | safe **+** network (`http`, `net`, `email`, `llm`) |
 | `--caps safe` | pure / log / process only (`math`, `json`, `sys`, `gum`, `markdown`, …) |
 
 From a restrictive tier the granular flags widen the grant: `--allow-net`,
-`--allow-fs`, and `--allow-cmd` (cmd is **never** granted by a tier — not even
-`full` — only by `--allow-cmd`). A module is classified by the **union** of
+`--allow-fs`, and `--allow-cmd`. A module is classified by the **union** of
 everything it can do, so the dual-capability modules — `web` (HTTP **+**
 `static_dir`) and `sqlite` (DB **+** remote `connect_remote`) — need **both**
 `--allow-net` and `--allow-fs` (or `--caps full`).
+
+**Host command execution (`cmd`) is the sharpest tool and is gated on its own.**
+The `cmd` module loads in the open posture, but `run()` is **disabled** — it
+returns an error — until you pass `--allow-cmd`, which **enables execution of any
+command** (no allowlist; still argv-only, never a shell). `cmd` is never granted
+by a tier, not even `full`. For a one-flag "trust everything" run there is
+**`--dangerously-allow-all`** — it opens network **+** filesystem **+** host
+command execution of any command in a single switch. Use it only with fully
+trusted scripts.
 
 Set a stricter default for a whole deployment with the env var:
 
@@ -127,8 +136,11 @@ $ ./starcli --caps safe -c 'load("http", "get")'       # fails (exit 4)
 # from safe, opt back into the network
 $ ./starcli --caps safe --allow-net -c 'load("http", "get"); print(get)'
 
-# host command execution always needs its own explicit flag
-$ ./starcli --caps safe --allow-cmd -c 'load("cmd", "run"); print(run("echo", "hi"))'
+# host command execution needs its own explicit flag (then run() runs anything)
+$ ./starcli --allow-cmd -c 'load("cmd", "run"); print(run("go version").stdout)'
+
+# one-flag "trust everything": network + filesystem + run any command
+$ ./starcli --dangerously-allow-all script.star
 ```
 
 ### Examples

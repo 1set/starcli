@@ -10,6 +10,8 @@ package cli
 //   - open default loads everything; invalid tier errors
 //   - end-to-end gating through Process under an explicit tier
 //   - wired pure domain modules are classified pure and pass the safe gate
+//   - cmd execution gating: off by default, on with --allow-cmd /
+//     --dangerously-allow-all (the execCmd lever + end-to-end run())
 
 import (
 	"strings"
@@ -19,16 +21,16 @@ import (
 )
 
 func TestModuleAllowed(t *testing.T) {
-	safe := grantFromFlags("safe", false, false, false)
-	network := grantFromFlags("network", false, false, false)
-	allowNet := grantFromFlags("safe", true, false, false)
-	allowFS := grantFromFlags("safe", false, true, false)
-	full := grantFromFlags("full", false, false, false)
-	fullCmd := grantFromFlags("full", false, false, true)
-	allowCmd := grantFromFlags("safe", false, false, true)
-	netFS := grantFromFlags("safe", true, true, false) // --allow-net --allow-fs
-	open := grantFromFlags("", false, false, false)    // default/empty == open
-	openX := grantFromFlags("open", false, false, false)
+	safe := grantFromFlags("safe", false, false, false, false)
+	network := grantFromFlags("network", false, false, false, false)
+	allowNet := grantFromFlags("safe", true, false, false, false)
+	allowFS := grantFromFlags("safe", false, true, false, false)
+	full := grantFromFlags("full", false, false, false, false)
+	fullCmd := grantFromFlags("full", false, false, true, false)
+	allowCmd := grantFromFlags("safe", false, false, true, false)
+	netFS := grantFromFlags("safe", true, true, false, false) // --allow-net --allow-fs
+	open := grantFromFlags("", false, false, false, false)    // default/empty == open
+	openX := grantFromFlags("open", false, false, false, false)
 
 	cases := []struct {
 		grant capGrant
@@ -82,15 +84,15 @@ func TestModuleAllowed(t *testing.T) {
 
 func TestAllowedModules(t *testing.T) {
 	in := []string{"math", "http", "cmd", "sqlite", "sys"}
-	safe := grantFromFlags("safe", false, false, false).allowedModules(in)
+	safe := grantFromFlags("safe", false, false, false, false).allowedModules(in)
 	if got := strings.Join(safe, ","); got != "math,sys" {
 		t.Errorf("safe allowedModules=%v want [math sys]", safe)
 	}
-	full := grantFromFlags("full", false, false, false).allowedModules(in)
+	full := grantFromFlags("full", false, false, false, false).allowedModules(in)
 	if got := strings.Join(full, ","); got != "math,http,sqlite,sys" {
 		t.Errorf("full allowedModules=%v want [math http sqlite sys]", full)
 	}
-	fullCmd := grantFromFlags("full", false, false, true).allowedModules(in)
+	fullCmd := grantFromFlags("full", false, false, true, false).allowedModules(in)
 	if got := strings.Join(fullCmd, ","); got != "math,http,cmd,sqlite,sys" {
 		t.Errorf("full+cmd allowedModules=%v want all", fullCmd)
 	}
@@ -214,4 +216,95 @@ func TestPureDomainModulesAreSafe(t *testing.T) {
 	if !strings.Contains(so, "\U0001F44B") { // waving hand emoji
 		t.Errorf("emoji.emojize output=%q, want a waving-hand emoji", so)
 	}
+}
+
+// --- cmd execution gating ----------------------------------------------------
+
+// TestGrantExecCmd pins the execCmd lever: command execution is OFF in the open
+// posture and under a bare tier, ON only with --allow-cmd or the one-flag
+// --dangerously-allow-all. allowCmd (loadability) is tracked separately.
+func TestGrantExecCmd(t *testing.T) {
+	cases := []struct {
+		name                string
+		grant               capGrant
+		wantExec, wantAllow bool
+	}{
+		{"open default loads cmd but no exec", grantFromFlags("", false, false, false, false), false, true},
+		{"full without allow-cmd: neither", grantFromFlags("full", false, false, false, false), false, false},
+		{"allow-cmd: load + exec", grantFromFlags("safe", false, false, true, false), true, true},
+		{"dangerously-allow-all: load + exec", grantFromFlags("safe", false, false, false, true), true, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if c.grant.execCmd != c.wantExec {
+				t.Errorf("execCmd=%v want %v", c.grant.execCmd, c.wantExec)
+			}
+			if c.grant.allowCmd != c.wantAllow {
+				t.Errorf("allowCmd=%v want %v", c.grant.allowCmd, c.wantAllow)
+			}
+		})
+	}
+}
+
+// TestProcess_CmdExecution_EndToEnd proves the wiring end-to-end: run() executes
+// only when the operator opted in. "go" is on PATH in CI on every OS, and no
+// allowlist permits it, so a successful run proves the allow-all enablement.
+func TestProcess_CmdExecution_EndToEnd(t *testing.T) {
+	runGo := `
+load("cmd", "run")
+res = run("go version")
+print(res.success)
+print("go version" in res.stdout)
+`
+
+	t.Run("default open: run() is disabled", func(t *testing.T) {
+		a := baseArgs() // no flags -> execCmd false
+		a.OutputPrinter = "stdout"
+		a.CodeContent = runGo
+		var rc int
+		_, se := captureStd(t, func() { rc = Process(a) })
+		if rc == 0 {
+			t.Errorf("default run() must be disabled, got exit 0")
+		}
+		if !strings.Contains(se, "disabled") {
+			t.Errorf("stderr %q should report command execution is disabled", se)
+		}
+	})
+
+	t.Run("--allow-cmd runs any command", func(t *testing.T) {
+		a := baseArgs()
+		a.AllowCmd = true
+		a.OutputPrinter = "stdout"
+		a.CodeContent = runGo
+		var rc int
+		so, se := captureStd(t, func() { rc = Process(a) })
+		if rc != 0 {
+			t.Fatalf("--allow-cmd run('go version') exit=%d stderr=%q", rc, se)
+		}
+		if strings.Count(so, "True") < 2 {
+			t.Errorf("--allow-cmd should run an un-allowlisted command, got:\n%s", so)
+		}
+	})
+
+	t.Run("--dangerously-allow-all opens net + cmd in one flag", func(t *testing.T) {
+		a := baseArgs()
+		a.Dangerous = true
+		a.OutputPrinter = "stdout"
+		// http (a network module) loading proves net is open; res.success proves
+		// cmd executes — both under the single flag.
+		a.CodeContent = `
+load("http", "get")
+load("cmd", "run")
+res = run("go version")
+print(res.success)
+`
+		var rc int
+		so, se := captureStd(t, func() { rc = Process(a) })
+		if rc != 0 {
+			t.Fatalf("--dangerously-allow-all exit=%d stderr=%q", rc, se)
+		}
+		if !strings.Contains(so, "True") {
+			t.Errorf("--dangerously-allow-all should load http and run cmd, got:\n%s", so)
+		}
+	})
 }
