@@ -213,5 +213,7 @@ $RECYCLE.BIN/
 *.db
 /starcli*
 /*.yaml
+!/.goreleaser.yaml
 /*.star
 /coverage.*
+dist/
