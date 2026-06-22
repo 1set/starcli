@@ -199,7 +199,11 @@ func TestGetDefaultModules(t *testing.T) {
 	}
 
 	// every CLI module is in the default set...
-	for _, want := range []string{"args", "sys", "gum", "email", "llm", "markdown", "cmd", "sqlite", "web"} {
+	for _, want := range []string{
+		"args", "sys", "gum", "email", "llm", "markdown", "cmd", "sqlite", "web",
+		// pure domain modules wired by default
+		"cache", "emoji", "liquid", "qrcode", "toml", "totp", "yaml",
+	} {
 		if !seen[want] {
 			t.Errorf("default modules missing CLI module %q", want)
 		}

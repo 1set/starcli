@@ -13,13 +13,20 @@ require (
 	github.com/samber/lo v1.50.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
+	github.com/starpkg/cache v0.1.0
 	github.com/starpkg/cmd v0.1.0
 	github.com/starpkg/email v0.1.0
+	github.com/starpkg/emoji v0.1.0
 	github.com/starpkg/gum v0.2.0
+	github.com/starpkg/liquid v0.1.0
 	github.com/starpkg/llm v0.1.0
 	github.com/starpkg/markdown v0.1.0
+	github.com/starpkg/qrcode v0.1.0
 	github.com/starpkg/sqlite v0.2.1
+	github.com/starpkg/toml v0.1.0
+	github.com/starpkg/totp v0.1.0
 	github.com/starpkg/web v0.1.0
+	github.com/starpkg/yaml v0.1.0
 	go.starlark.net v0.0.0-20260324133313-ffb3f39dd27a
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
@@ -34,11 +41,13 @@ require (
 	charm.land/huh/v2 v2.0.3 // indirect
 	charm.land/lipgloss/v2 v2.0.4 // indirect
 	github.com/1set/starlight v0.2.0 // indirect
+	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
+	github.com/boombuler/barcode v1.1.0 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/catppuccin/go v0.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
@@ -87,7 +96,10 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
+	github.com/osteele/liquid v1.4.0 // indirect
+	github.com/osteele/tuesday v1.0.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
+	github.com/pquerna/otp v1.4.0 // indirect
 	github.com/psanford/memfs v0.0.0-20230130182539-4dbf7e3e865e // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/resend/resend-go/v2 v2.11.0 // indirect
@@ -120,6 +132,7 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
 	modernc.org/libc v1.55.3 // indirect

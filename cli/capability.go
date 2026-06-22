@@ -31,6 +31,13 @@ const modCmd = "cmd"
 var starpkgCaps = map[string]starlet.ModuleCapability{
 	"args":     starlet.CapPure,                            // argparse-style parsing of the captured argv
 	"markdown": starlet.CapPure,                            // goldmark render, no host effect
+	"cache":    starlet.CapPure,                            // in-process key/value cache, no host effect
+	"emoji":    starlet.CapPure,                            // emoji/symbol text conversion
+	"liquid":   starlet.CapPure,                            // Shopify Liquid template render
+	"qrcode":   starlet.CapPure,                            // QR encoding to string/bytes, no file writes
+	"toml":     starlet.CapPure,                            // TOML decode/encode
+	"totp":     starlet.CapPure,                            // TOTP code generation/validation
+	"yaml":     starlet.CapPure,                            // YAML decode/encode
 	"sys":      starlet.CapProcess,                         // argv/platform/host + stdin
 	"gum":      starlet.CapProcess,                         // interactive terminal I/O
 	"email":    starlet.CapNetwork,                         // Resend API
