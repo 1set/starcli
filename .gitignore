@@ -215,3 +215,4 @@ $RECYCLE.BIN/
 /*.yaml
 /*.star
 /coverage.*
+dist/

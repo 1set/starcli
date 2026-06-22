@@ -1,0 +1,32 @@
+name: Release
+
+# Build and publish cross-platform binaries when a vX.Y.Z tag is pushed.
+# The tag itself is still cut by a human (after maintainer confirmation) — this
+# workflow only turns an existing tag into prebuilt archives + a GitHub Release.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # full history for the changelog
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.x"
+      - name: Run GoReleaser
+        # Third-party action pinned to a full commit SHA (supply-chain policy).
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
