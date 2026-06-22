@@ -9,10 +9,13 @@ package cli
 //   - allowedModules filtering
 //   - open default loads everything; invalid tier errors
 //   - end-to-end gating through Process under an explicit tier
+//   - wired pure domain modules are classified pure and pass the safe gate
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/1set/starlet"
 )
 
 func TestModuleAllowed(t *testing.T) {
@@ -169,5 +172,46 @@ func TestProcess_CapabilityGate_EndToEnd(t *testing.T) {
 				t.Errorf("%s: stderr %q missing %q", c.name, se, c.wantErr)
 			}
 		})
+	}
+}
+
+// TestAllWiredModulesClassified guards against wiring a module without
+// classifying it: every name in cliMods must have a capability (starpkg here or
+// a starlet builtin), or it would slip through the capability gate unpredictably.
+func TestAllWiredModulesClassified(t *testing.T) {
+	for _, name := range cliMods {
+		if _, ok := moduleCaps(name); !ok {
+			t.Errorf("wired CLI module %q has no capability classification", name)
+		}
+	}
+}
+
+// TestPureDomainModulesAreSafe pins the contract for the pure starpkg modules
+// wired by default (cache/emoji/liquid/qrcode/toml/totp/yaml): each is classified
+// CapPure, so it loads even under the strictest --caps safe gate. The emoji case
+// also runs end-to-end to prove the module actually executes, not just resolves.
+func TestPureDomainModulesAreSafe(t *testing.T) {
+	for _, name := range []string{"cache", "emoji", "liquid", "qrcode", "toml", "totp", "yaml"} {
+		caps, ok := moduleCaps(name)
+		if !ok {
+			t.Errorf("pure module %q is wired but not classified", name)
+			continue
+		}
+		if caps != starlet.CapPure {
+			t.Errorf("pure module %q caps=%v, want CapPure (no network/filesystem reach)", name, caps)
+		}
+	}
+
+	a := baseArgs()
+	a.OutputPrinter = "stdout"
+	a.Caps = "safe" // strictest gate; a pure module must still load
+	a.CodeContent = `load("emoji", "emojize"); print(emojize("hi :wave:"))`
+	var rc int
+	so, se := captureStd(t, func() { rc = Process(a) })
+	if rc != 0 {
+		t.Fatalf("safe gate should load pure emoji module: exit=%d stderr=%q", rc, se)
+	}
+	if !strings.Contains(so, "\U0001F44B") { // waving hand emoji
+		t.Errorf("emoji.emojize output=%q, want a waving-hand emoji", so)
 	}
 }

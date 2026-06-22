@@ -10,13 +10,20 @@ import (
 	"github.com/1set/starcli/module/sys"
 	"github.com/1set/starlet"
 	"github.com/samber/lo"
+	"github.com/starpkg/cache"
 	"github.com/starpkg/cmd"
 	"github.com/starpkg/email"
+	"github.com/starpkg/emoji"
 	"github.com/starpkg/gum"
+	"github.com/starpkg/liquid"
 	"github.com/starpkg/llm"
 	"github.com/starpkg/markdown"
+	"github.com/starpkg/qrcode"
 	"github.com/starpkg/sqlite"
+	"github.com/starpkg/toml"
+	"github.com/starpkg/totp"
 	"github.com/starpkg/web"
+	"github.com/starpkg/yaml"
 )
 
 var (
@@ -31,6 +38,15 @@ var (
 		cmd.ModuleName,
 		sqlite.ModuleName,
 		web.ModuleName,
+		// pure domain modules (no network / filesystem) — wired by default so
+		// the turnkey CLI matches the ecosystem's pure starpkg surface.
+		cache.ModuleName,
+		emoji.ModuleName,
+		liquid.ModuleName,
+		qrcode.ModuleName,
+		toml.ModuleName,
+		totp.ModuleName,
+		yaml.ModuleName,
 	}
 )
 
@@ -90,6 +106,20 @@ func loadCLIModuleByName(opts *BoxOpts, name string) (starlet.ModuleLoader, erro
 		return sqlite.NewModule().LoadModule(), nil
 	case web.ModuleName:
 		return web.NewModule().LoadModule(), nil
+	case cache.ModuleName:
+		return cache.NewModule().LoadModule(), nil
+	case emoji.ModuleName:
+		return emoji.NewModule().LoadModule(), nil
+	case liquid.ModuleName:
+		return liquid.NewModule().LoadModule(), nil
+	case qrcode.ModuleName:
+		return qrcode.NewModule().LoadModule(), nil
+	case toml.ModuleName:
+		return toml.NewModule().LoadModule(), nil
+	case totp.ModuleName:
+		return totp.NewModule().LoadModule(), nil
+	case yaml.ModuleName:
+		return yaml.NewModule().LoadModule(), nil
 	// Add more modules as needed
 	default:
 		return nil, fmt.Errorf("unknown module: %s", name)

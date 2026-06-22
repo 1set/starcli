@@ -28,6 +28,7 @@ StarCLI is a versatile tool that provides a convenient environment for running S
   - Base64 encoding/decoding
   - Email functionality
   - LLM (Language Model) integration
+  - Templating, data formats & utilities (Liquid, TOML/YAML, QR codes, TOTP, emoji, in-memory cache)
   - And many more
 
 ## Installation
@@ -77,7 +78,7 @@ Usage of ./starcli:
       --log-format string   log file format: console (human) or json (machine) (default "console")
       --max-output uint     max top-level output entries per run (0=unlimited)
       --max-steps uint      max Starlark execution steps per run, guards runaway loops (0=unlimited)
-  -m, --module strings      allowed modules to preload and load (default [args,atom,base64,cmd,csv,email,file,go_idiomatic,gum,hashlib,http,json,llm,log,markdown,math,net,path,random,re,regex,runtime,serial,sqlite,stats,string,struct,sys,time,web])
+  -m, --module strings      allowed modules to preload and load (default [args,atom,base64,cache,cmd,csv,email,emoji,file,go_idiomatic,gum,hashlib,http,json,liquid,llm,log,markdown,math,net,path,qrcode,random,re,regex,runtime,serial,sqlite,stats,string,struct,sys,time,toml,totp,web,yaml])
   -o, --output string       output printer: none,stdout,stderr,basic,lineno,since,auto (default "auto")
       --record string       record the complete session output (stdout+stderr) to this transcript file
   -r, --recursion           allow recursion in Starlark code
