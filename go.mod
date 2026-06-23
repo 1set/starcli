@@ -3,6 +3,7 @@ module github.com/1set/starcli
 go 1.25.8
 
 require (
+	bitbucket.org/ai69/colorlogo v0.1.3
 	github.com/1set/starbox v0.2.0
 	github.com/1set/starlet v0.2.2
 	github.com/kyokomi/emoji/v2 v2.2.13
@@ -31,7 +32,6 @@ require (
 )
 
 require (
-	bitbucket.org/ai69/colorlogo v0.1.3 // indirect
 	bitbucket.org/creachadair/shell v0.0.8 // indirect
 	charm.land/bubbles/v2 v2.0.0 // indirect
 	charm.land/bubbletea/v2 v2.0.2 // indirect

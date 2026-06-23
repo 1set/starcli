@@ -3,8 +3,11 @@ package config
 import (
 	_ "embed"
 	"fmt"
+	"math/rand"
 	"runtime"
 	"strings"
+
+	cl "bitbucket.org/ai69/colorlogo"
 )
 
 // revive:disable:exported
@@ -24,11 +27,25 @@ var (
 	logoArt string
 )
 
+// logoGradients is a set of colorlogo colour-scheme presets; DisplayBuildInfo
+// picks one at random each run, so the banner shows a different palette on every
+// launch.
+var logoGradients = []func(string) string{
+	cl.OceanSandByColumn,
+	cl.AnamnisarByColumn,
+	cl.IbizaSunsetByColumn,
+	cl.PurpleParadiseByColumn,
+	cl.RainbowBlueByColumn,
+	cl.EveningNightByColumn,
+	cl.SublimeVividByColumn,
+	cl.CherryBlossomsByColumn,
+}
+
 // DisplayBuildInfo prints the build information to the console.
 func DisplayBuildInfo() {
-	// write logo
+	// write the logo with a randomly chosen colour scheme
 	var sb strings.Builder
-	sb.WriteString(colorizeLogo(logoArt))
+	sb.WriteString(logoGradients[rand.Intn(len(logoGradients))](logoArt))
 	sb.WriteString("\n")
 
 	// inline helpers
@@ -51,14 +68,4 @@ func DisplayBuildInfo() {
 	addNonBlankField("GitSummary", GitSummary)
 
 	fmt.Println(sb.String())
-}
-
-// colorizeLogo renders the logo art with a per-line ANSI 256-colour gradient.
-func colorizeLogo(art string) string {
-	palette := []int{45, 44, 43, 49, 48, 84, 78, 79} // teal → green gradient
-	var sb strings.Builder
-	for i, line := range strings.Split(strings.TrimRight(art, "\n"), "\n") {
-		fmt.Fprintf(&sb, "\x1b[38;5;%dm%s\x1b[0m\n", palette[i%len(palette)], line)
-	}
-	return sb.String()
 }
