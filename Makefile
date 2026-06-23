@@ -27,10 +27,10 @@ GOMOD=$(GOCMD) mod
 export CGO_ENABLED=0
 export TZ=Asia/Shanghai
 export PACK=github.com/1set/starcli/config
-export FLAGS="-s -w -X '$(PACK).AppName=$(BINARY)' -X '$(PACK).BuildDate=`date '+%Y-%m-%dT%T%z'`' -X '$(PACK).BuildHost=`hostname`' -X '$(PACK).GoVersion=`go version`' -X '$(PACK).GitBranch=`git symbolic-ref -q --short HEAD`' -X '$(PACK).GitCommit=`git rev-parse --short HEAD`' -X '$(PACK).GitSummary=$${GIT_TAG_NAME:-`git describe --tags --dirty --always`}' -X '$(PACK).CIBuildNum=${BUILD_NUM}'"
+export FLAGS="-s -w -X '$(PACK).AppName=$(BINARY)' -X '$(PACK).BuildDate=`date '+%Y-%m-%dT%T%z'`' -X '$(PACK).BuildHost=`hostname`' -X '$(PACK).GoVersion=`go env GOVERSION`' -X '$(PACK).GitBranch=`git symbolic-ref -q --short HEAD`' -X '$(PACK).GitCommit=`git rev-parse --short HEAD`' -X '$(PACK).GitSummary=$${GIT_TAG_NAME:-`git describe --tags --dirty --always`}' -X '$(PACK).CIBuildNum=${BUILD_NUM}'"
 
 # commands
-.PHONY: default build build_linux build_mac build_windows run install ci test bench
+.PHONY: default build build_linux build_mac build_windows snapshot run install ci test bench
 default:
 	@echo "build target is required for $(BINARY)"
 	@exit 1
@@ -46,6 +46,12 @@ build_mac:
 
 build_windows:
 	GOOS=windows GOARCH=amd64 $(GOBUILD) -v -ldflags $(FLAGS) -trimpath -o $(BINARY).exe .
+
+# Release-style cross-platform build via GoReleaser (snapshot = local dry-run,
+# nothing is published). Inspect the artifacts under dist/. `make build` stays
+# the fast single-platform dev build; this is for checking what a release ships.
+snapshot:
+	GOVERSION=`go env GOVERSION` $(GORUN) github.com/goreleaser/goreleaser/v2@latest release --snapshot --clean
 
 run: build
 	./$(BINARY)
