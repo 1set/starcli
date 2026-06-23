@@ -21,6 +21,11 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: "1.25.x"
+      - name: Capture Go version
+        # GoReleaser has no built-in go-version var; expose it for the ldflags.
+        # Use `go env GOVERSION` (e.g. go1.25.9) — a single token, since ldflag
+        # values must not contain spaces (`go version ...` would break linking).
+        run: echo "GOVERSION=$(go env GOVERSION)" >> "$GITHUB_ENV"
       - name: Run GoReleaser
         # Third-party action pinned to a full commit SHA (supply-chain policy).
         uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2

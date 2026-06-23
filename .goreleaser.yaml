@@ -7,6 +7,12 @@ version: 2
 
 project_name: starcli
 
+# GoVersion isn't a built-in GoReleaser template var, so the release workflow
+# exports `GOVERSION=$(go version)` into the env; this entry surfaces it (and
+# stays empty for a local `--snapshot` where it isn't set, rather than erroring).
+env:
+  - GOVERSION={{ if index .Env "GOVERSION" }}{{ .Env.GOVERSION }}{{ end }}
+
 before:
   hooks:
     - go mod download
@@ -33,9 +39,12 @@ builds:
     ldflags:
       - -s -w
       - -X github.com/1set/starcli/config.AppName=starcli
-      - -X github.com/1set/starcli/config.GitSummary={{ .Version }}
+      # GitSummary uses the full tag (e.g. v0.1.2), matching `git describe`; the
+      # GitBranch field is intentionally omitted — a tag build is on a detached
+      # HEAD, so a "branch" is meaningless there.
+      - -X github.com/1set/starcli/config.GitSummary={{ .Tag }}
       - -X github.com/1set/starcli/config.GitCommit={{ .ShortCommit }}
-      - -X github.com/1set/starcli/config.GitBranch={{ .Branch }}
+      - -X github.com/1set/starcli/config.GoVersion={{ .Env.GOVERSION }}
       - -X github.com/1set/starcli/config.BuildDate={{ .Date }}
 
 archives:
