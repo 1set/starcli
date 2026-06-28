@@ -30,3 +30,20 @@ jobs:
       # footprint gates stay off (as on starbox).
       cov-min: 65
     secrets: inherit
+
+  # The examples/ build-your-own demos are their own Go module (minimal deps, out
+  # of the main coverage gate), so they build in a separate, non-gating job rather
+  # than inside the reusable CI. This just proves the demos and the kit API they
+  # use still compile and vet clean.
+  examples:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.x"
+      - name: Build and vet the examples module
+        working-directory: examples
+        run: |
+          go build ./...
+          go vet ./...
