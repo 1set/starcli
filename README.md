@@ -288,6 +288,27 @@ direct.star:1:7: undefined: undefined_name
 check: 1 problem(s) found
 ```
 
+## Build your own CLI
+
+StarCLI is the **standard, fully-loaded** build. It is assembled from a small
+reusable core — the [`kit`](kit) package — that you can use to build your **own**
+CLI: a few-line Go shell that embeds your Starlark scripts and wires only the
+modules you need. Your shell and the standard StarCLI construct their runtime
+through the same path, so they behave identically.
+
+```go
+//go:embed app.star
+var app string
+
+func main() {
+	// embed the script + pick modules + run, in one call
+	kit.Run(app, kit.WithModules("json", "math"))
+}
+```
+
+See [`examples/`](examples) for runnable demos (a minimal shell, and one wiring a
+single starpkg module) and the build-your-own quickstart.
+
 ## Configuration
 
 StarCLI can be configured through a config file (YAML format) using the `-C` or `--config` flag:

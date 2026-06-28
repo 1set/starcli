@@ -8,6 +8,8 @@ import (
 	"sync"
 
 	"github.com/1set/starbox"
+	"github.com/1set/starcli/kit"
+	"github.com/1set/starlet"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -43,10 +45,15 @@ type BoxOpts struct {
 	execCmd        bool   // derived from the grant: construct cmd ENABLED (allow-all)
 }
 
-// BuildBox creates a new Starbox with the given options. By default every wired
-// module is available (the open posture); a restrictive --caps tier / STAR_CAPS
-// or an --allow-* flag installs a capability load gate so only the permitted
-// modules may be loaded.
+// BuildBox creates a new Starbox with the given options. It is the standard,
+// fully-loaded instance of the shared kit core (kit.Box): the CLI-specific
+// concerns — capability gating, scenario-driven printer, file logging — are
+// resolved here and handed to kit as options, so the turnkey CLI and any
+// build-your-own shell construct their runtime through exactly the same path.
+//
+// By default every wired module is available (the open posture); a restrictive
+// --caps tier / STAR_CAPS or an --allow-* flag installs a capability load gate so
+// only the permitted modules may be loaded.
 func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
 	if !validCapsTier(opts.caps) {
 		return nil, fmt.Errorf("unknown --caps value %q (want: open, full, network, or safe)", opts.caps)
@@ -56,14 +63,33 @@ func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
 	// only when the grant permits execution; otherwise cmd loads disabled.
 	opts.execCmd = grant.execCmd
 
-	var box *starbox.Starbox
-	if grant.unrestricted() {
-		// Default open posture: no load gate, every wired module is loadable.
-		box = starbox.New(opts.name)
-	} else {
+	// set print function: TODO: for scenario, and throw errors
+	pf, err := getPrinterFunc(opts.scenario, opts.printerName)
+	if err != nil {
+		return nil, err
+	}
+
+	kitOpts := []kit.Option{
+		// execution budgets (0 == unlimited): a step budget bounds runaway loops
+		// that a wall-clock timeout cannot stop; an output cap bounds result size.
+		kit.WithMaxSteps(opts.maxSteps),
+		kit.WithMaxOutputEntries(opts.maxOutput),
+		// the CLI prints results itself, so keep raw Starlark values.
+		kit.WithOutputConversion(false),
+		kit.WithGlobalReassign(opts.globalReassign),
+		kit.WithRecursion(opts.recursion),
+		kit.WithPrintFunc(pf),
+		// every starpkg module is resolved on demand from the CLI's registry.
+		kit.WithDynamicLoader(func(name string) (starlet.ModuleLoader, error) {
+			return loadCLIModuleByName(opts, name)
+		}),
+		kit.WithModules(opts.moduleToLoad...),
+	}
+
+	if !grant.unrestricted() {
 		// A tier/flag narrowed the grant: gate loading to the permitted set.
 		policy := starbox.Policy{Modules: starbox.ModuleAllow{Names: grant.allowedModules(getDefaultModules())}}
-		box = starbox.NewWithPolicy(opts.name, policy)
+		kitOpts = append(kitOpts, kit.WithPolicy(policy))
 	}
 
 	// Route the script's `log` module output to a file when requested (C-4):
@@ -74,45 +100,14 @@ func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
 		if err != nil {
 			return nil, err
 		}
-		box.SetLogger(lg)
+		kitOpts = append(kitOpts, kit.WithLogger(lg))
 	}
 
 	if strings.TrimSpace(opts.includePath) != "" {
-		box.SetFS(os.DirFS(opts.includePath))
+		kitOpts = append(kitOpts, kit.WithFS(os.DirFS(opts.includePath)))
 	}
 
-	// execution budgets (0 == unlimited): a step budget bounds runaway loops
-	// that a wall-clock timeout cannot stop; an output cap bounds result size.
-	box.SetMaxExecutionSteps(opts.maxSteps)
-	box.SetMaxOutputEntries(opts.maxOutput)
-
-	// machine-level knobs
-	mac := box.GetMachine()
-	mac.SetOutputConversionEnabled(false)
-	if opts.globalReassign {
-		mac.EnableGlobalReassign()
-	} else {
-		mac.DisableGlobalReassign()
-	}
-	if opts.recursion {
-		mac.EnableRecursionSupport()
-	} else {
-		mac.DisableRecursionSupport()
-	}
-
-	// set print function: TODO: for scenario, and throw errors
-	pf, err := getPrinterFunc(opts.scenario, opts.printerName)
-	if err != nil {
-		return nil, err
-	}
-	box.SetPrintFunc(pf)
-
-	// load modules
-	box.SetModuleSet(starbox.EmptyModuleSet) // force clean the module set
-	if err := loadModules(box, opts); err != nil {
-		return nil, err
-	}
-	return box, nil
+	return kit.New(opts.name, kitOpts...).Box()
 }
 
 var (

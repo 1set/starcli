@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/1set/starbox"
 	"github.com/1set/starcli/config"
 	"github.com/1set/starcli/module/args"
 	"github.com/1set/starcli/module/sys"
@@ -57,25 +56,10 @@ func getDefaultModules() []string {
 	return allMods
 }
 
-// loadModules loads the given modules into the Starbox instance.
-func loadModules(box *starbox.Starbox, opts *BoxOpts) error {
-	usrMods := opts.moduleToLoad
-	if len(usrMods) == 0 {
-		// no modules to load
-		log.Debugw("no modules to load", "user_modules", usrMods)
-		return nil
-	}
-
-	// set dynamic module loader
-	box.SetDynamicModuleLoader(func(name string) (starlet.ModuleLoader, error) {
-		return loadCLIModuleByName(opts, name)
-	})
-	box.AddModulesByName(usrMods...)
-
-	// all is well
-	return nil
-}
-
+// loadCLIModuleByName is the CLI's module registry: it resolves a module name to
+// its loader on demand. BuildBox installs it as the kit dynamic loader, so the
+// turnkey CLI exposes every starpkg module while a build-your-own shell wires
+// only the few it imports.
 func loadCLIModuleByName(opts *BoxOpts, name string) (starlet.ModuleLoader, error) {
 	switch name {
 	case args.ModuleName:
