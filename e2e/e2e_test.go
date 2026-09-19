@@ -3,15 +3,26 @@
 // the "build a binary -> run a .star -> compare stdout/exit" coverage the v0.1.0
 // cost-price audit flagged as missing: it proves the wired modules actually
 // *work* through the CLI, not merely that they load.
+//
+// Sections: local imports, golden scripts, domain modules, stdin, containers.
 package e2e
 
 import (
 	"bytes"
+	"context"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // binPath is the freshly built starcli binary, set up once in TestMain.
@@ -209,4 +220,124 @@ func TestStdinConsumption(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestContainer exercises the repository Dockerfile, including its entrypoint,
+// trust store, embedded time zones, non-root user, and PID 1 shutdown behavior.
+// Build it for linux/amd64 and set STARCLI_TEST_IMAGE to opt in.
+func TestContainer(t *testing.T) {
+	image := os.Getenv("STARCLI_TEST_IMAGE")
+	if image == "" {
+		t.Skip("set STARCLI_TEST_IMAGE to test a built container image")
+	}
+	docker := func(args ...string) (string, error) {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		out, err := exec.CommandContext(ctx, "docker", args...).CombinedOutput()
+		return string(out), err
+	}
+	runArgs := []string{"run", "--rm", "--platform", "linux/amd64", "--read-only",
+		"--cap-drop=ALL", "--security-opt=no-new-privileges", "--memory=256m", "--cpus=1",
+		"--pids-limit=64", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m"}
+	run := func(options, args []string) (string, error) {
+		all := append(append([]string{}, runArgs...), options...)
+		all = append(all, image)
+		return docker(append(all, args...)...)
+	}
+	for _, tc := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"arguments reach CLI", []string{"-c", `print(6 * 7)`}, "42\n"},
+		{"non-root user", []string{"--allow-cmd", "-c", `load("cmd", "run"); print(run("id -u").stdout.strip())`}, "65532\n"},
+		{"embedded timezone", []string{"-c", `load("time", "parse_time"); print(parse_time("2021-03-22T12:00:00Z").in_location("America/New_York").hour)`}, "8\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := run(nil, tc.args)
+			if err != nil || out != tc.want {
+				t.Fatalf("output=%q error=%v, want %q", out, err, tc.want)
+			}
+		})
+	}
+	t.Run("exit status", func(t *testing.T) {
+		out, err := run(nil, []string{"-c", `fail("container failure")`})
+		if err == nil || !strings.Contains(out, "container failure") {
+			t.Fatalf("output=%q error=%v, want script failure", out, err)
+		}
+	})
+	t.Run("HTTPS trust", func(t *testing.T) {
+		bundle, err := run([]string{"--entrypoint", "/bin/cat"}, []string{"/etc/ssl/certs/ca-certificates.crt"})
+		if err != nil || !x509.NewCertPool().AppendCertsFromPEM([]byte(bundle)) {
+			t.Fatalf("image must include a usable CA bundle: %v", err)
+		}
+		// The standard httptest certificate covers example.com. Resolve that
+		// name to the local Docker host, so this test needs no public service.
+		srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = io.WriteString(w, "trusted fixture")
+		}))
+		_ = srv.Listener.Close()
+		srv.Listener, err = net.Listen("tcp", "0.0.0.0:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		srv.StartTLS()
+		defer srv.Close()
+		port := srv.Listener.Addr().(*net.TCPAddr).Port
+		code := fmt.Sprintf(`load("http", "get"); print(get("https://example.com:%d").status_code)`, port)
+		options := []string{"--add-host", "example.com:host-gateway"}
+		out, err := run(options, []string{"-c", code})
+		if err == nil || !strings.Contains(out, "certificate signed by unknown authority") {
+			t.Fatalf("untrusted certificate: output=%q error=%v", out, err)
+		}
+		caFile := filepath.Join(t.TempDir(), "ca-certificates.crt")
+		bundle += string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw}))
+		if err := os.WriteFile(caFile, []byte(bundle), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		options = append(options, "--mount", "type=bind,src="+caFile+",dst=/etc/ssl/certs/ca-certificates.crt,readonly")
+		out, err = run(options, []string{"-c", code})
+		if err != nil || out != "200\n" {
+			t.Fatalf("trusted certificate: output=%q error=%v", out, err)
+		}
+	})
+	t.Run("HTTP and graceful stop", func(t *testing.T) {
+		args := []string{"run", "-d", "--platform", "linux/amd64", "--read-only", "--cap-drop=ALL",
+			"--security-opt=no-new-privileges", "--memory=256m", "--cpus=1", "--pids-limit=64",
+			"-p", "127.0.0.1::8080", image, "--caps", "safe", "--web-host", "0.0.0.0", "--web", "8080",
+			"-c", `response.set_text("container ready")`}
+		id, err := docker(args...)
+		if err != nil {
+			t.Fatalf("start: %v: %s", err, id)
+		}
+		id = strings.TrimSpace(id)
+		t.Cleanup(func() { _, _ = docker("rm", "-f", id) })
+		port, err := docker("port", id, "8080/tcp")
+		if err != nil {
+			t.Fatalf("published port: %v: %s", err, port)
+		}
+		client := &http.Client{Timeout: time.Second}
+		ready := false
+		for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); {
+			resp, err := client.Get("http://" + strings.TrimSpace(port))
+			if err == nil {
+				body, readErr := io.ReadAll(resp.Body)
+				_ = resp.Body.Close()
+				ready = readErr == nil && resp.StatusCode == http.StatusOK && string(body) == "container ready"
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		if !ready {
+			logs, _ := docker("logs", id)
+			t.Fatalf("HTTP endpoint did not become ready: %s", logs)
+		}
+		if out, err := docker("stop", "--time", "5", id); err != nil {
+			t.Fatalf("stop: %v: %s", err, out)
+		}
+		if out, err := docker("inspect", "--format", "{{.State.ExitCode}}", id); err != nil || strings.TrimSpace(out) != "0" {
+			t.Fatalf("graceful exit: %v: %s", err, out)
+		}
+	})
 }
