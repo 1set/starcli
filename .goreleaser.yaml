@@ -39,10 +39,11 @@ builds:
     ldflags:
       - -s -w
       - -X github.com/1set/starcli/config.AppName=starcli
-      # GitSummary uses the full tag (e.g. v0.1.2), matching `git describe`; the
+      # Version includes the snapshot suffix when no release tag is being built;
+      # do not report the previous stable tag for an untagged snapshot. The
       # GitBranch field is intentionally omitted — a tag build is on a detached
       # HEAD, so a "branch" is meaningless there.
-      - -X github.com/1set/starcli/config.GitSummary={{ .Tag }}
+      - -X github.com/1set/starcli/config.GitSummary=v{{ .Version }}
       - -X github.com/1set/starcli/config.GitCommit={{ .ShortCommit }}
       - -X github.com/1set/starcli/config.GoVersion={{ .Env.GOVERSION }}
       - -X github.com/1set/starcli/config.BuildDate={{ .Date }}
