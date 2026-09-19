@@ -45,18 +45,39 @@ make build
 
 ### Docker
 
-The project includes a Dockerfile to build and run StarCLI in a container:
+Build the static Linux binary before building the image. The image runs as UID
+65532, includes system CA certificates, and uses the binary's embedded time-zone
+data. Arguments go directly to StarCLI, which also receives stop signals.
 
 ```bash
-# Build the Docker image
-docker build -t starcli .
+# Build and test the linux/amd64 image (also from an Apple Silicon host)
+make build_linux
+docker build --platform linux/amd64 -t starcli .
+STARCLI_TEST_IMAGE=starcli go test ./e2e -run TestContainer -count=1
 
 # Run in interactive mode
-docker run -it starcli
+docker run --rm --platform linux/amd64 -it starcli
 
 # Run a specific script
-docker run -v $(pwd):/scripts starcli sh -c "/root/starcli /scripts/your-script.star"
+docker run --rm --platform linux/amd64 --read-only \
+  --cap-drop=ALL --security-opt=no-new-privileges \
+  --memory=256m --cpus=1 --pids-limit=64 \
+  --mount "type=bind,src=$(pwd),dst=/scripts,readonly" \
+  starcli --caps safe -I /scripts /scripts/your-script.star
+
+# Serve a host-selected script; publish only on the host's loopback interface
+docker run --rm --platform linux/amd64 --read-only \
+  --cap-drop=ALL --security-opt=no-new-privileges \
+  --memory=256m --cpus=1 --pids-limit=64 \
+  -p 127.0.0.1:8080:8080 starcli --caps safe \
+  --web-host 0.0.0.0 --web 8080 -c 'response.set_text("ready")'
 ```
+
+Mounted scripts must be readable by UID 65532. Mount a separate writable
+directory when a trusted script needs persistent data. These examples are for
+host-selected scripts; the image is not an untrusted multi-tenant execution
+service. The container no longer uses `/root`, port 80, or a shell command as
+its default entrypoint. Override `--entrypoint` explicitly if you need a shell.
 
 ## Usage
 

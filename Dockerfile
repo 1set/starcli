@@ -1,23 +1,18 @@
-FROM ubuntu:20.04
+FROM debian:bookworm-slim
 
-ARG ROOT_PATH=/root
-ARG BINARY=starcli
-
-ENV BINPATH=${ROOT_PATH}/${BINARY}
+# Build the static linux/amd64 binary first with `make build_linux`.
+# Named time zones are embedded by main.go's time/tzdata import.
 ENV TERM=xterm-256color
-ENV TZ=Asia/Shanghai
-ENV PORT=80
-
-EXPOSE 80
-WORKDIR ${ROOT_PATH}
-
-COPY ${BINARY} ${ROOT_PATH}/
+ENV HOME=/work
 
 RUN set -eux; \
     apt-get update \
-    && apt-get install -y --no-install-recommends apt-transport-https ca-certificates tzdata \
-    && apt-get clean && rm -rf /var/lib/apt/lists/* ; \
-    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo ${TZ} > /etc/timezone ; \
-    chmod +x ${BINPATH}
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir /work && chown 65532:65532 /work
 
-CMD ["sh", "-c", "${BINPATH}"]
+COPY --chmod=755 starcli /usr/local/bin/starcli
+USER 65532:65532
+WORKDIR /work
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/starcli"]
