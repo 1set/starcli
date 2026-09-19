@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/1set/starcli/config"
 	"github.com/1set/starlet"
@@ -48,7 +49,9 @@ func stdinRead(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple
 	if err := starlark.UnpackArgs(b.Name(), args, kwargs); err != nil {
 		return nil, err
 	}
-	data, err := io.ReadAll(os.Stdin)
+	stdin.Lock()
+	data, err := io.ReadAll(stdin.reader())
+	stdin.Unlock()
 	if err != nil {
 		return nil, err
 	}
@@ -73,10 +76,9 @@ func stdinLinesFn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tu
 	return stdinLines{}, nil
 }
 
-// stdinLines is a one-shot lazy iterable over os.Stdin lines (trailing CR/LF
-// trimmed). Iterating it more than once yields nothing the second time, as the
-// stream is already drained — the same single-stream contract as `for line in
-// sys.stdin` in Python.
+// stdinLines is a lazy iterable over the remaining stdin lines (CR/LF trimmed).
+// input(), read(), and all iterators share the same buffered stream. Breaking
+// iteration leaves unread data available; draining the stream exhausts it.
 type stdinLines struct{}
 
 var _ starlark.Iterable = stdinLines{}
@@ -87,11 +89,10 @@ func (stdinLines) Freeze()               {}
 func (stdinLines) Truth() starlark.Bool  { return starlark.True }
 func (stdinLines) Hash() (uint32, error) { return 0, fmt.Errorf("unhashable type: stdin_lines") }
 func (stdinLines) Iterate() starlark.Iterator {
-	return &stdinLinesIter{r: bufio.NewReader(os.Stdin)}
+	return &stdinLinesIter{}
 }
 
 type stdinLinesIter struct {
-	r    *bufio.Reader
 	done bool
 }
 
@@ -99,7 +100,7 @@ func (it *stdinLinesIter) Next(p *starlark.Value) bool {
 	if it.done {
 		return false
 	}
-	line, err := it.r.ReadString('\n')
+	line, err := readStdinLine()
 	if line == "" && err != nil {
 		it.done = true
 		return false
@@ -124,12 +125,37 @@ func rawStdInput(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tup
 		fmt.Print(prompt)
 	}
 	// read input from stdin
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
-	if err != nil {
+	input, err := readStdinLine()
+	if err != nil && !(err == io.EOF && len(input) > 0) {
 		return nil, err
 	}
 	// trim newline characters
 	input = strings.TrimRight(input, "\r\n")
 	return starlark.String(input), nil
+}
+
+// stdin owns buffering for the process stream, across module loads and reads.
+// The file identity also allows hosts to replace os.Stdin between executions.
+// Reads are serialized so multiple consumers cannot corrupt bufio state.
+type stdinState struct {
+	sync.Mutex
+	source *os.File
+	buffer *bufio.Reader
+}
+
+var stdin stdinState
+
+// reader must be called while s is locked.
+func (s *stdinState) reader() *bufio.Reader {
+	if s.buffer == nil || s.source != os.Stdin {
+		s.source = os.Stdin
+		s.buffer = bufio.NewReader(s.source)
+	}
+	return s.buffer
+}
+
+func readStdinLine() (string, error) {
+	stdin.Lock()
+	defer stdin.Unlock()
+	return stdin.reader().ReadString('\n')
 }

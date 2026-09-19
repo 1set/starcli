@@ -195,3 +195,18 @@ db.close()
 		})
 	}
 }
+
+func TestStdinConsumption(t *testing.T) {
+	for _, tc := range []struct{ name, input, code, want string }{
+		{"EOF tail", "last", `load("sys", "input"); print(input())`, "last\n"},
+		{"mixed readers", "a\nb\nc", `load("sys", "input", "lines", "read"); print(input()); print(list(lines())); print(read())`, "a\n[\"b\", \"c\"]\n\n"},
+		{"continuous input", "a\nb", `load("sys", "input"); print(input()); print(input())`, "a\nb\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			out, errOut, exit := runCLI(t, tc.input, "-c", tc.code)
+			if exit != 0 || out != tc.want {
+				t.Fatalf("exit=%d stdout=%q stderr=%q, want %q", exit, out, errOut, tc.want)
+			}
+		})
+	}
+}

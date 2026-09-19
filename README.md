@@ -268,7 +268,10 @@ $ cat session.log
 #### Read Piped Input
 
 The `sys` module reads piped **data** from standard input (the script itself
-still comes from a file or `-c`). `sys.read()` returns all of stdin; `sys.lines()`
+still comes from a file or `-c`). `sys.input()` accepts a final line without a newline. All input helpers share
+one buffered stream: consecutive calls and mixed `input()` / `lines()` / `read()`
+consume the remaining data without discarding read-ahead. An empty `input()` at
+EOF reports EOF. `sys.read()` returns all remaining stdin; `sys.lines()`
 is a **lazy** iterator (a large stream is not buffered whole); `sys.isatty()`
 tells interactive from piped input.
 

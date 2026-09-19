@@ -5,11 +5,14 @@ package sys
 // Sections:
 //   - module dict (platform/arch/version/argv/host/input)
 //   - input() reads and trims a line from stdin
+//   - shared stream, EOF, CRLF, buffering, iteration and read errors
 
 import (
+	"errors"
 	"io"
 	"os"
 	"runtime"
+	"strings"
 	"testing"
 
 	"go.starlark.net/starlark"
@@ -25,8 +28,9 @@ func withStdin(t *testing.T, content string, f func()) {
 	}
 	orig := os.Stdin
 	os.Stdin = r
-	defer func() { os.Stdin = orig }()
-	go func() { _, _ = io.WriteString(w, content); _ = w.Close() }()
+	finished := make(chan struct{})
+	defer func() { _ = r.Close(); <-finished; os.Stdin = orig }()
+	go func() { defer close(finished); _, _ = io.WriteString(w, content); _ = w.Close() }()
 	f()
 }
 
@@ -129,7 +133,7 @@ func TestInput_ReadsAndTrimsLine(t *testing.T) {
 	r, w, _ := os.Pipe()
 	orig := os.Stdin
 	os.Stdin = r
-	defer func() { os.Stdin = orig }()
+	defer func() { _ = r.Close(); os.Stdin = orig }()
 	go func() { _, _ = w.WriteString("hello world\r\n"); _ = w.Close() }()
 
 	b := starlark.NewBuiltin("sys.input", rawStdInput)
@@ -139,5 +143,69 @@ func TestInput_ReadsAndTrimsLine(t *testing.T) {
 	}
 	if got != starlark.String("hello world") {
 		t.Errorf("input=%v want %q (CR/LF trimmed)", got, "hello world")
+	}
+}
+
+// Shared stdin contract: input, read, and every iterator consume one stream.
+func TestStdinSharedStream(t *testing.T) {
+	for _, tc := range []struct {
+		name, text, code, want string
+	}{
+		{"EOF tail", "tail", `result = input()`, `"tail"`},
+		{"continuous", "a\nb\nc", `result = [input(), input(), input()]`, `["a", "b", "c"]`},
+		{"input then read", "a\nb\nc", `result = [input(), read()]`, `["a", "b\nc"]`},
+		{"input then lines", "a\nb\nc", `result = [input(), list(lines())]`, `["a", ["b", "c"]]`},
+		{"iterator then input", "a\nb\nc", "def take_one():\n    for line in lines():\n        return line\nresult = [take_one(), input(), read()]", `["a", "b", "c"]`},
+		{"iterators share stream", "a\nb\nc", "stream = lines()\ndef take_one():\n    for line in stream:\n        return line\nresult = [take_one(), list(stream), list(stream)]", `["a", ["b", "c"], []]`},
+		{"CRLF and blank", "a\r\n\r\nz", `result = [input(), input(), input()]`, `["a", "", "z"]`},
+		{"trailing LF", "a\n", `result = [input(), list(lines()), read()]`, `["a", [], ""]`},
+		{"empty", "", `result = [list(lines()), read()]`, `[[], ""]`},
+		{"long line", strings.Repeat("x", 70000) + "\nlast", `result = [len(input()), input()]`, `[70000, "last"]`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			withStdin(t, tc.text, func() {
+				predeclared := starlark.StringDict{
+					"input": starlark.NewBuiltin("input", rawStdInput),
+					"read":  starlark.NewBuiltin("read", stdinRead),
+					"lines": starlark.NewBuiltin("lines", stdinLinesFn),
+				}
+				globals, err := starlark.ExecFile(&starlark.Thread{}, "stdin.star", tc.code, predeclared)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got := globals["result"].String(); got != tc.want {
+					t.Fatalf("result = %s, want %s", got, tc.want)
+				}
+			})
+		})
+	}
+}
+
+func TestStdinErrors(t *testing.T) {
+	withStdin(t, "", func() {
+		if _, err := rawStdInput(nil, starlark.NewBuiltin("input", rawStdInput), nil, nil); !errors.Is(err, io.EOF) {
+			t.Fatalf("empty input: %v", err)
+		}
+	})
+	withStdin(t, "", func() {
+		if err := os.Stdin.Close(); err != nil {
+			t.Fatal(err)
+		}
+		for name, fn := range map[string]func(*starlark.Thread, *starlark.Builtin, starlark.Tuple, []starlark.Tuple) (starlark.Value, error){"input": rawStdInput, "read": stdinRead} {
+			if _, err := fn(nil, starlark.NewBuiltin(name, fn), nil, nil); err == nil {
+				t.Errorf("%s accepted closed stdin", name)
+			}
+		}
+		it := stdinLines{}.Iterate()
+		defer it.Done()
+		var v starlark.Value
+		if it.Next(&v) || it.Next(&v) {
+			t.Error("closed stdin produced a line")
+		}
+	})
+	for name, fn := range map[string]func(*starlark.Thread, *starlark.Builtin, starlark.Tuple, []starlark.Tuple) (starlark.Value, error){"input": rawStdInput, "read": stdinRead, "lines": stdinLinesFn, "isatty": stdinIsatty} {
+		if _, err := fn(nil, starlark.NewBuiltin(name, fn), starlark.Tuple{starlark.None}, nil); err == nil {
+			t.Errorf("%s accepted invalid args", name)
+		}
 	}
 }
