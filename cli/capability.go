@@ -57,7 +57,7 @@ func moduleCaps(name string) (starlet.ModuleCapability, bool) {
 }
 
 // safeCaps is the most restrictive tier: pure computation (CapPure == 0),
-// logging, and process/runtime info — no network, no filesystem, no exec.
+// logging, and sys process info — no network, no filesystem, no exec.
 const safeCaps = starlet.CapLog | starlet.CapProcess
 
 // allCaps is every non-exec capability bit (the "open"/"full" reach).
@@ -121,9 +121,10 @@ func grantFromFlags(caps string, allowNet, allowFS, allowCmd, dangerous bool) ca
 }
 
 // unrestricted reports whether the grant permits everything (the default open
-// posture). A Box built under an unrestricted grant needs no load gate at all.
+// posture with an explicit execution grant). Other grants must gate gum and
+// runtime even when filesystem and network capabilities are open.
 func (g capGrant) unrestricted() bool {
-	return g.caps == allCaps && g.allowCmd
+	return g.caps == allCaps && g.execCmd
 }
 
 // moduleAllowed reports whether a module may load under this grant. cmd is gated
@@ -132,6 +133,11 @@ func (g capGrant) unrestricted() bool {
 func (g capGrant) moduleAllowed(name string) bool {
 	if name == modCmd {
 		return g.allowCmd
+	}
+	// runtime mutates the process environment; gum can launch an editor, tmux,
+	// or a spinner command. Gate the entire modules before constructing them.
+	if name == "runtime" || name == "gum" {
+		return g.execCmd
 	}
 	c, ok := moduleCaps(name)
 	if !ok {

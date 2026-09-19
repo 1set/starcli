@@ -176,7 +176,7 @@ db.close()
 		},
 		{
 			name:   "gum table renders headless",
-			args:   []string{"-c", `load("gum", "table"); print(table(["Name"], [["Ada"]]))`},
+			args:   []string{"--allow-cmd", "-c", `load("gum", "table"); print(table(["Name"], [["Ada"]]))`},
 			outSub: []string{"Name", "Ada"},
 		},
 	}

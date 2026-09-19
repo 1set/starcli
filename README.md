@@ -98,7 +98,7 @@ just work. To sandbox an untrusted script, **tighten** the capability tier with
 | _(default)_ `open` | everything loadable; `cmd` loads but command **execution** stays off until `--allow-cmd` |
 | `--caps full` | network **and** filesystem (but **not** `cmd`) |
 | `--caps network` | safe **+** network (`http`, `net`, `email`, `llm`) |
-| `--caps safe` | pure / log / process only (`math`, `json`, `sys`, `gum`, `markdown`, …) |
+| `--caps safe` | pure / log / process only (`math`, `json`, `sys`, `markdown`, …) |
 
 From a restrictive tier the granular flags widen the grant: `--allow-net`,
 `--allow-fs`, and `--allow-cmd`. A module is classified by the **union** of
@@ -383,3 +383,16 @@ These cooperative limits do not preempt arbitrary Go builtins or provide
 process/RSS isolation. This entry point is for controlled scripts; untrusted
 code and public multi-tenant execution require isolated workers and separate
 admission review.
+
+### Process execution and environment capabilities
+
+`gum` (including its editor, tmux and spinner paths) and `runtime` (including
+`putenv`, `setenv` and `unsetenv`) require `--allow-cmd` or
+`--dangerously-allow-all`. This applies to every tier, including the default
+open tier, and to both preloaded modules and `load()` calls. `--allow-net`,
+`--allow-fs`, and `--caps full` do not imply command execution. Use `sys` for
+basic process/platform information without granting these capabilities.
+
+`--allow-cmd` authorizes arbitrary host commands and their environment; it is
+not a restricted command allowlist or an isolation boundary. The CLI supports
+host-selected scripts. Run untrusted scripts in a separate constrained worker.
