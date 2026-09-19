@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/1set/starlet"
@@ -390,4 +391,22 @@ print(res.success)
 			t.Errorf("--dangerously-allow-all should load http and run cmd, got:\n%s", so)
 		}
 	})
+}
+
+func TestBuildBoxConcurrentOptions(t *testing.T) {
+	opts := &BoxOpts{scenario: scenarioWeb, printerName: "none", caps: "safe", allowCmd: true}
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := BuildBox(opts); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	wg.Wait()
+	if opts.execCmd {
+		t.Fatal("BuildBox mutated caller options")
+	}
 }

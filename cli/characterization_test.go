@@ -18,7 +18,11 @@ package cli
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"io"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -26,6 +30,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	flag "github.com/spf13/pflag"
 	"go.starlark.net/starlark"
@@ -467,5 +472,84 @@ func TestParseArgsIncludeDefaults(t *testing.T) {
 		if got.IncludePath != tc.include || got.Caps != tc.caps {
 			t.Fatalf("%v: include=%q caps=%q", tc.args, got.IncludePath, got.Caps)
 		}
+	}
+}
+
+func TestWebServerEntryLifecycle(t *testing.T) {
+	for _, file := range []bool{false, true} {
+		t.Run(fmt.Sprint(file), func(t *testing.T) {
+			ln, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatal(err)
+			}
+			addr := ln.Addr().String()
+			args := baseArgs()
+			args.WebHost = "127.0.0.1"
+			args.WebPort = uint16(ln.Addr().(*net.TCPAddr).Port)
+			args.WebMaxBody = 1024
+			args.WebMaxConcurrent = 1
+			args.WebTimeout = time.Second
+			args.CodeContent = `response.set_text("entry-ok")`
+			if file {
+				path := filepath.Join(t.TempDir(), "entry.star")
+				if err := os.WriteFile(path, []byte(args.CodeContent), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				args.CodeContent = ""
+				args.NumberOfArgs = 1
+				args.Arguments = []string{path}
+			}
+			if err := runWebServer(args); err == nil {
+				t.Fatal("occupied listener accepted")
+			}
+			if err := ln.Close(); err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			done := make(chan error, 1)
+			go func() { done <- runWebServerContext(ctx, args) }()
+			defer func() {
+				cancel()
+				select {
+				case err := <-done:
+					if err != nil {
+						t.Error(err)
+					}
+				case <-time.After(7 * time.Second):
+					t.Error("server did not stop")
+				}
+			}()
+			client := &http.Client{Timeout: time.Second}
+			defer client.CloseIdleConnections()
+			deadline := time.Now().Add(3 * time.Second)
+			for {
+				resp, err := client.Get("http://" + addr)
+				if err == nil {
+					body, readErr := io.ReadAll(resp.Body)
+					_ = resp.Body.Close()
+					if readErr != nil || string(body) != "entry-ok" {
+						t.Fatalf("response %q: %v", body, readErr)
+					}
+					break
+				}
+				if time.Now().After(deadline) {
+					t.Fatal(err)
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+		})
+	}
+	args := baseArgs()
+	args.CodeContent = "pass"
+	args.CodeContent = ""
+	args.NumberOfArgs = 1
+	args.Arguments = []string{filepath.Join(t.TempDir(), "missing.star")}
+	if err := runWebServerContext(context.Background(), args); err == nil {
+		t.Fatal("missing entry accepted")
+	}
+	args.CodeContent = "pass"
+	args.Caps = "invalid"
+	if err := runWebServerContext(context.Background(), args); err == nil {
+		t.Fatal("invalid box accepted")
 	}
 }

@@ -364,3 +364,22 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Contact
 
 For any questions or support, please open an issue on [GitHub](https://github.com/1set/starcli/issues).
+
+### HTTP execution limits
+
+`--web PORT` serves host-selected, trusted scripts on `127.0.0.1` by default.
+Use `--web-host ADDRESS` to explicitly allow another bind address. The defaults
+are a 1 MiB body (`--web-max-body`), 16 admitted requests
+(`--web-max-concurrency`), and a 15s execution deadline (`--web-timeout`). All
+three limits must be positive. Oversized bodies return 413, read failures 400,
+admission overflow 503, and execution deadlines 504; request cancellation
+propagates to the interpreter. Transport limits are 16 KiB headers, 5s header
+read, 10s request read, 30s idle, and execution deadline + 10s response write.
+
+Ctrl-C / SIGTERM stop admission, cancel requests, and drain connections for up
+to 5s before closing remaining connections. Startup errors return a nonzero
+CLI status. Embedders can use `web.StartContext` for the same lifecycle.
+These cooperative limits do not preempt arbitrary Go builtins or provide
+process/RSS isolation. This entry point is for controlled scripts; untrusted
+code and public multi-tenant execution require isolated workers and separate
+admission review.
