@@ -63,10 +63,10 @@ docker run -v $(pwd):/scripts starcli sh -c "/root/starcli /scripts/your-script.
 ```bash
 $ ./starcli -h
 Usage of ./starcli:
-      --allow-cmd               enable the cmd module to run ANY host command (no allowlist); also widens a restrictive tier
+      --allow-cmd               allow ANY host command, gum subprocesses, and runtime environment mutation (trusted scripts only)
       --allow-fs                widen a restrictive tier with filesystem modules (file, path)
       --allow-net               widen a restrictive tier with network modules (http, net, email, llm)
-      --caps string             capability tier: open (default, everything) | full | network | safe; or env STAR_CAPS
+      --caps string             capability tier: open (default net/fs) | full | network | safe; or env STAR_CAPS
       --check                   syntax/resolve check the script (-c or file) without running it
   -c, --code string             Starlark code to execute
   -C, --config string           config file to load
@@ -89,14 +89,14 @@ Usage of ./starcli:
 
 ### Capabilities & sandboxing
 
-By default StarCLI runs **open** — every wired module is available, so scripts
-just work. To sandbox an untrusted script, **tighten** the capability tier with
-`--caps` (or the `STAR_CAPS` env var) and a default-deny load gate is installed:
+By default StarCLI runs **open**, granting network and filesystem access.
+Choose the capabilities needed by host-selected scripts with `--caps` (or the
+`STAR_CAPS` env var). Module access follows this grant:
 
 | tier | loadable modules |
 |---|---|
-| _(default)_ `open` | everything loadable; `cmd` loads but command **execution** stays off until `--allow-cmd` |
-| `--caps full` | network **and** filesystem (but **not** `cmd`) |
+| _(default)_ `open` | network **and** filesystem; `cmd` loads with execution disabled; `gum` and `runtime` require `--allow-cmd` |
+| `--caps full` | network **and** filesystem; `cmd`, `gum`, and `runtime` require `--allow-cmd` |
 | `--caps network` | safe **+** network (`http`, `net`, `email`, `llm`) |
 | `--caps safe` | pure / log / process only (`math`, `json`, `sys`, `markdown`, …) |
 
@@ -135,7 +135,7 @@ scripts: `--max-steps` caps Starlark computation steps and `--max-output` caps a
 run's result size.
 
 ```bash
-# open by default: anything loads
+# open by default: network and filesystem modules load
 $ ./starcli -c 'load("http", "get"); print(get)'
 
 # sandbox down to safe: a network module is now withheld
