@@ -293,3 +293,81 @@ func TestServerInvalidConfiguration(t *testing.T) {
 		t.Fatal("closed listener accepted")
 	}
 }
+
+// A host builder may still be blocked when graceful draining expires. The
+// listener and connection must close even then; the host releases its builder.
+func TestServerForcesBlockedConnectionClosed(t *testing.T) {
+	cfg := DefaultConfig(0)
+	ln, err := net.Listen("tcp", cfg.Address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	entered, release := make(chan struct{}), make(chan struct{})
+	var releaseOnce sync.Once
+	defer func() { cancel(); releaseOnce.Do(func() { close(release) }) }()
+	builder := func() *starbox.RunnerConfig {
+		close(entered)
+		<-release
+		return builderFor(`response.set_text("done")`)()
+	}
+	done := make(chan error, 1)
+	go func() { done <- serve(ctx, ln, cfg, builder) }()
+	requested := make(chan error, 1)
+	client := &http.Client{Timeout: 10 * time.Second}
+	defer client.CloseIdleConnections()
+	go func() {
+		resp, err := client.Get("http://" + ln.Addr().String())
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+		requested <- err
+	}()
+	select {
+	case <-entered:
+	case <-time.After(3 * time.Second):
+		t.Fatal("request did not reach builder")
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(8 * time.Second):
+		t.Fatal("forced shutdown stalled")
+	}
+	select {
+	case err := <-requested:
+		if err == nil {
+			t.Fatal("blocked request unexpectedly succeeded")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("connection survived forced shutdown")
+	}
+	releaseOnce.Do(func() { close(release) })
+}
+
+func TestHandlerCancellationAfterAdmission(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	builder := func() *starbox.RunnerConfig {
+		cancel()
+		return builderFor(`response.set_text("must not run")`)()
+	}
+	rec := httptest.NewRecorder()
+	handler(builder)(rec, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(ctx))
+	if rec.Code != http.StatusRequestTimeout {
+		t.Fatalf("status=%d", rec.Code)
+	}
+}
+
+type failedResponseWriter struct{ header http.Header }
+
+func (w failedResponseWriter) Header() http.Header       { return w.header }
+func (w failedResponseWriter) WriteHeader(int)           {}
+func (w failedResponseWriter) Write([]byte) (int, error) { return 0, errors.New("disconnected") }
+
+func TestHandlerDisconnectedWriter(t *testing.T) {
+	handler(builderFor(`response.set_text("done")`))(failedResponseWriter{header: make(http.Header)}, httptest.NewRequest(http.MethodGet, "/", nil))
+}
