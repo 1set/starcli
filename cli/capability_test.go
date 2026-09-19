@@ -14,11 +14,94 @@ package cli
 //     --dangerously-allow-all (the execCmd lever + end-to-end run())
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/1set/starlet"
 )
+
+// TestIncludeGrantMatrix covers every tier/flag combination in both directions:
+// an implicit CWD needs the filesystem capability; an explicit include root is
+// a separate host grant and must not grant the file module itself.
+func TestIncludeGrantMatrix(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if err := os.WriteFile("fixture.star", []byte("value = 73"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tier := range []string{"", "open", "safe", "network", "full"} {
+		for flags := 0; flags < 16; flags++ {
+			for _, include := range []string{"", ".", dir} {
+				t.Run(fmt.Sprintf("tier=%s/flags=%d/include=%s", tier, flags, include), func(t *testing.T) {
+					allowNet, allowFS, allowCmd, dangerous := flags&1 != 0, flags&2 != 0, flags&4 != 0, flags&8 != 0
+					wantLoad := include != "" || tier == "" || tier == "open" || tier == "full" || allowFS || dangerous
+					box, err := BuildBox(&BoxOpts{scenario: scenarioDirect, printerName: "none", caps: tier, allowNet: allowNet, allowFS: allowFS, allowCmd: allowCmd, dangerous: dangerous, includePath: include})
+					if err != nil {
+						t.Fatal(err)
+					}
+					_, err = box.Run(`load("fixture.star", "value"); observed = value`)
+					if (err == nil) != wantLoad {
+						t.Fatalf("load allowed=%v, want %v: %v", err == nil, wantLoad, err)
+					}
+				})
+			}
+		}
+	}
+	box, err := BuildBox(&BoxOpts{scenario: scenarioDirect, printerName: "none", caps: "safe", includePath: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := box.Run(`load("file", "read")`); err == nil {
+		t.Fatal("an include root must not grant the file module")
+	}
+}
+
+func TestIncludeRootContainment(t *testing.T) {
+	root, outside := t.TempDir(), t.TempDir()
+	if _, err := (includeFS{root: filepath.Join(root, "missing")}).Open("fixture.star"); err == nil {
+		t.Fatal("opening a missing include root succeeded")
+	}
+	for _, dir := range []string{root, outside} {
+		if err := os.WriteFile(filepath.Join(dir, "fixture.star"), []byte("value = 73"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, name := range []string{"../fixture.star", filepath.ToSlash(filepath.Join(outside, "fixture.star"))} {
+		box, err := BuildBox(&BoxOpts{scenario: scenarioDirect, printerName: "none", caps: "safe", includePath: root})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := box.Run(fmt.Sprintf("load(%q, \"value\")", name)); err == nil {
+			t.Errorf("out-of-root load %q succeeded", name)
+		}
+	}
+	for _, tc := range []struct {
+		name   string
+		target string
+		allow  bool
+	}{
+		{"inside", "fixture.star", true},
+		{"absolute inside", filepath.Join(root, "fixture.star"), false},
+		{"outside", filepath.Join(outside, "fixture.star"), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := os.Symlink(tc.target, filepath.Join(root, tc.name+".star")); err != nil {
+				t.Skipf("symlink unavailable: %v", err)
+			}
+			box, err := BuildBox(&BoxOpts{scenario: scenarioDirect, printerName: "none", caps: "safe", includePath: root})
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = box.Run(fmt.Sprintf("load(%q, \"value\")", tc.name+".star"))
+			if (err == nil) != tc.allow {
+				t.Errorf("symlink load allowed=%v, want %v: %v", err == nil, tc.allow, err)
+			}
+		})
+	}
+}
 
 func TestModuleAllowed(t *testing.T) {
 	safe := grantFromFlags("safe", false, false, false, false)

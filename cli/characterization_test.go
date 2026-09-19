@@ -27,6 +27,7 @@ import (
 	"strings"
 	"testing"
 
+	flag "github.com/spf13/pflag"
 	"go.starlark.net/starlark"
 )
 
@@ -245,7 +246,7 @@ func baseArgs() *Args {
 	return &Args{
 		AllowGlobalReassign: true,
 		ModulesToLoad:       getDefaultModules(),
-		IncludePath:         ".",
+		IncludePath:         "",
 		LogLevel:            "panic",
 		OutputPrinter:       "auto",
 	}
@@ -447,3 +448,24 @@ func TestBuildBox_Toggles(t *testing.T) {
 // guard: starlark import is used (keeps the PrintFunc signature honest if the
 // printer call sites change during the refactor).
 var _ = starlark.Thread{}
+
+func TestParseArgsIncludeDefaults(t *testing.T) {
+	originalFlags, originalArgs := flag.CommandLine, os.Args
+	defer func() { flag.CommandLine, os.Args = originalFlags, originalArgs }()
+	t.Setenv("STAR_CAPS", "safe")
+	for _, tc := range []struct {
+		args          []string
+		include, caps string
+	}{
+		{nil, "", "safe"},
+		{[]string{"-I", "."}, ".", "safe"},
+		{[]string{"--include", "scripts", "--caps", "network"}, "scripts", "network"},
+	} {
+		flag.CommandLine = flag.NewFlagSet("test", flag.ContinueOnError)
+		os.Args = append([]string{"starcli"}, tc.args...)
+		got := ParseArgs()
+		if got.IncludePath != tc.include || got.Caps != tc.caps {
+			t.Fatalf("%v: include=%q caps=%q", tc.args, got.IncludePath, got.Caps)
+		}
+	}
+}

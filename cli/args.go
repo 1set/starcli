@@ -43,7 +43,7 @@ func ParseArgs() *Args {
 	flag.BoolVarP(&args.AllowRecursion, "recursion", "r", false, "allow recursion in Starlark code")
 	flag.BoolVarP(&args.AllowGlobalReassign, "globalreassign", "g", true, "allow reassigning global variables in Starlark code")
 	flag.StringSliceVarP(&args.ModulesToLoad, "module", "m", getDefaultModules(), "allowed modules to preload and load")
-	flag.StringVarP(&args.IncludePath, "include", "I", ".", "include path for Starlark code to load modules from")
+	flag.StringVarP(&args.IncludePath, "include", "I", "", "grant load() this directory (default: CWD only with filesystem capability)")
 	flag.StringVarP(&args.CodeContent, "code", "c", "", "Starlark code to execute")
 	flag.Uint16VarP(&args.WebPort, "web", "w", 0, "run web server on specified port, it provides request and response structs for Starlark code to use")
 	flag.StringVarP(&args.LogLevel, "log", "l", "info", "log level: debug, info, warn, error, dpanic, panic, fatal")

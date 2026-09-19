@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,7 +38,7 @@ type BoxOpts struct {
 	logFormat      string // log file encoding: "console" (default) or "json"
 	maxSteps       uint64 // per-run Starlark step budget; 0 = unlimited
 	maxOutput      uint   // per-run top-level output entry cap; 0 = unlimited
-	caps           string // capability tier: safe (default) / network / full
+	caps           string // capability tier: open (default) / safe / network / full
 	allowNet       bool   // widen the grant with network modules
 	allowFS        bool   // widen the grant with filesystem modules
 	allowCmd       bool   // allow the cmd (host command execution) module
@@ -103,11 +104,34 @@ func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
 		kitOpts = append(kitOpts, kit.WithLogger(lg))
 	}
 
-	if strings.TrimSpace(opts.includePath) != "" {
-		kitOpts = append(kitOpts, kit.WithFS(os.DirFS(opts.includePath)))
+	includePath := opts.includePath
+	if strings.TrimSpace(includePath) == "" && grant.caps&starlet.CapFileSystem != 0 {
+		includePath = "."
+	}
+	if strings.TrimSpace(includePath) != "" {
+		kitOpts = append(kitOpts, kit.WithFS(includeFS{root: includePath}))
 	}
 
 	return kit.New(opts.name, kitOpts...).Box()
+}
+
+// includeFS grants load() only the requested root. os.DirFS follows symlinks
+// outside that root; os.Root performs the traversal checks during the open.
+// Open the root per file so building a per-request box retains no directory fd.
+type includeFS struct {
+	root string
+}
+
+func (f includeFS) Open(name string) (fs.File, error) {
+	if !fs.ValidPath(name) {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
+	}
+	root, err := os.OpenRoot(f.root)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	return root.Open(name)
 }
 
 var (
