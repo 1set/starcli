@@ -4,7 +4,8 @@
 // cost-price audit flagged as missing: it proves the wired modules actually
 // *work* through the CLI, not merely that they load.
 //
-// Sections: local imports, golden scripts, domain modules, stdin, containers.
+// Sections: local imports, golden scripts, domain modules, stdin, recordings,
+// containers.
 package e2e
 
 import (
@@ -227,6 +228,34 @@ func TestStdinConsumption(t *testing.T) {
 				t.Fatalf("exit=%d stdout=%q stderr=%q, want %q", exit, out, errOut, tc.want)
 			}
 		})
+	}
+}
+
+func TestSessionRecording(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "session with spaces.log")
+	for _, tc := range []struct {
+		code string
+		exit int
+	}{
+		{`print("recorded first run")`, 0},
+		{`print("recorded second run"); fail("recorded error")`, 1},
+	} {
+		_, stderr, exit := runCLI(t, "", "--record", path, "-c", tc.code)
+		if exit != tc.exit {
+			t.Fatalf("exit=%d want %d: %s", exit, tc.exit, stderr)
+		}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"recorded first run", "recorded second run", "recorded error"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("transcript is missing %q", want)
+		}
+	}
+	if strings.Count(string(data), "===== starcli session") != 2 {
+		t.Errorf("expected two appended session headers: %s", data)
 	}
 }
 

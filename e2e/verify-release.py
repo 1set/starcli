@@ -102,6 +102,73 @@ def smoke(binary, version):
     run(binary, "-c", 'fail("installation test")', success=False)
 
 
+def verify_terminal_recording(binary, directory):
+    if os.name != "posix":
+        print("PTY recording test requires Unix; portable recording is covered by e2e", flush=True)
+        return
+    import pty
+    import select
+    import signal
+    import time
+
+    for mode, flags in (("repl", []), ("inspect", ["-i", "-c", "value = 40"])):
+        transcript = directory / (mode + ".log")
+        pid, fd = pty.fork()
+        if pid == 0:
+            os.environ["TERM"] = "xterm-256color"
+            os.execv(str(binary), [str(binary), "--caps", "safe", "--record", str(transcript), *flags])
+        output = bytearray()
+
+        def receive(token, start=0):
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                if token in output[start:]:
+                    return
+                if select.select([fd], [], [], 0.1)[0]:
+                    chunk = os.read(fd, 65536)
+                    if not chunk:
+                        break
+                    output.extend(chunk)
+                    if len(output) > 1024 * 1024:
+                        raise RuntimeError("unexpectedly large terminal output")
+            raise RuntimeError(f"missing terminal output {token!r}: {bytes(output)!r}")
+
+        try:
+            receive(b">>> ")
+            for source, expected in (
+                (b'print("recorded " + str(6*7))\n', b"recorded 42"),
+                (b'fail("terminal failure")\n', b"fail: terminal failure"),
+                (b'"recovered " + str(6*7)\n', b"recovered 42"),
+                (b'\x03', b"Interrupt"),
+                (b'print("after interrupt " + str(6*7))\n', b"after interrupt 42"),
+            ):
+                start = len(output)
+                os.write(fd, source)
+                receive(expected, start)
+            os.write(fd, b"\x04")
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                child, status = os.waitpid(pid, os.WNOHANG)
+                if child:
+                    pid = None
+                    if os.waitstatus_to_exitcode(status) != 0:
+                        raise RuntimeError(f"terminal session failed: {status}")
+                    break
+                time.sleep(0.05)
+            else:
+                raise RuntimeError("terminal session did not exit after EOF")
+            data = transcript.read_text()
+            for expected in (">>> ", "recorded 42", "fail: terminal failure", "recovered 42", "after interrupt 42"):
+                if expected not in data:
+                    raise RuntimeError(f"transcript omitted {expected!r}")
+            print(f"passed real terminal recording: {mode}", flush=True)
+        finally:
+            os.close(fd)
+            if pid is not None:
+                os.kill(pid, signal.SIGKILL)
+                os.waitpid(pid, 0)
+
+
 def main():
     directory, version, previous, previous_version = sys.argv[1:]
     candidate = verify_archives(Path(directory), version)
@@ -123,6 +190,7 @@ def main():
                     ["go", "test", "-v", "./e2e", "-count=1"], check=True,
                     env={**os.environ, "STARCLI_TEST_BINARY": str(binary)}, timeout=180,
                 )
+                verify_terminal_recording(binary, Path(temp))
             if binary.read_bytes() != data:
                 raise ValueError(f"installed bytes changed during {label}")
             print(f"passed {label}: v{expected_version}", flush=True)
