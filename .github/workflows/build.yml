@@ -10,16 +10,17 @@ permissions: read-all
 
 jobs:
   ci:
+    permissions:
+      contents: read
+      id-token: write
     # Reusable CI lives in 1set/meta — the single source of truth for every
     # Star* module's pipeline. Pinned to a commit SHA for supply-chain safety;
     # bump the pin when meta's workflow changes (Dependabot github-actions can
     # automate this).
-    uses: 1set/meta/.github/workflows/go-ci.yml@5d86667e7264f012655dab2644dfa44e09597445
+    uses: 1set/meta/.github/workflows/go-ci.yml@496f38088eff1a37bae1b43d158146a8a9d83a37
     with:
-      # Matches go.mod's floor. Consuming gum v0.2.0 (Charm v2, which declares
-      # go 1.25.8) raises the floor to 1.25 — the ecosystem's go-1.25 exception,
-      # so the matrix coincides with the latest-stable leg (there is no version
-      # in between to test).
+      # Match go.mod's compatibility floor; the shared workflow also tests
+      # the current stable Go release.
       go-floor: "1.25"
       # Test-coverage ratchet (covcheck). The CLI-R0 characterization suite
       # brought total statement coverage to ~69.5% (cli 68.9 / config 94.1 /
@@ -41,7 +42,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.25.x"
+          go-version: "1.27.x"
       - name: Build and vet the examples module
         working-directory: examples
         run: |

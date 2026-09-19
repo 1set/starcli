@@ -1,7 +1,7 @@
 # GoReleaser configuration for starcli — cross-platform prebuilt binaries so the
 # CLI can be installed without a Go toolchain. Validate/iterate locally with:
-#   go run github.com/goreleaser/goreleaser/v2@latest check
-#   go run github.com/goreleaser/goreleaser/v2@latest release --snapshot --clean --skip=publish
+#   go run github.com/goreleaser/goreleaser/v2@v2.18.2 check
+#   go run github.com/goreleaser/goreleaser/v2@v2.18.2 release --snapshot --clean --skip=publish
 # Releases are produced on a vX.Y.Z tag by .github/workflows/release.yml.
 version: 2
 

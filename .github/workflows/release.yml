@@ -20,7 +20,9 @@ jobs:
           fetch-depth: 0 # full history for the changelog
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.25.x"
+          go-version: "1.27.1"
+      - name: Check source vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
       - name: Capture Go version
         # GoReleaser has no built-in go-version var; expose it for the ldflags.
         # Use `go env GOVERSION` (e.g. go1.25.9) — a single token, since ldflag
@@ -31,7 +33,7 @@ jobs:
         uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
         with:
           distribution: goreleaser
-          version: "~> v2"
+          version: "v2.18.2"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
