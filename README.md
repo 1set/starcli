@@ -33,6 +33,40 @@ StarCLI is a versatile tool that provides a convenient environment for running S
 
 ## Installation
 
+### Prebuilt archives
+
+Download the archive for your system and `checksums.txt` from the same
+[GitHub Release](https://github.com/1set/starcli/releases). No Go installation is
+needed to run a release binary.
+
+| System | Architecture | Archive suffix |
+|---|---|---|
+| Linux | amd64 / arm64 | `linux_amd64.tar.gz` / `linux_arm64.tar.gz` |
+| macOS | Intel / Apple Silicon | `macOS_amd64.tar.gz` / `macOS_arm64.tar.gz` |
+| Windows | x64 / ARM64 | `windows_amd64.zip` / `windows_arm64.zip` |
+
+1. Compute the archive's SHA-256 (`sha256sum FILE` on Linux,
+   `shasum -a 256 FILE` on macOS, or `Get-FileHash FILE -Algorithm SHA256` in
+   PowerShell) and compare it with the matching filename in `checksums.txt`.
+2. Extract the archive. Keep its README and license; copy `starcli` (or
+   `starcli.exe`) into a directory on your PATH.
+3. Run `starcli --version` and `starcli -c 'print(6 * 7)'`. The version must
+   match the downloaded release and the script must print `42`.
+
+Before upgrading, keep a copy of the currently installed binary and record its
+version. Stop running CLI processes, replace the binary, and repeat the checks
+above. To roll back, stop those processes and restore the saved binary. This
+rehearses binary replacement; backing up script-owned files or databases is the
+host application's responsibility.
+
+The release workflow verifies all six archive layouts and checksums, then runs
+installation, upgrade from v0.1.2, the CLI end-to-end suite, and binary rollback
+on all six native targets. It publishes those same archives after the checks
+pass and adds GitHub artifact attestations. For releases produced by this
+workflow, verify provenance with `gh attestation verify FILE --repo 1set/starcli`.
+Older releases may not include attestations. Binaries are not Apple notarized
+or Windows Authenticode signed.
+
 ### From Source
 
 Clone the repository and build from source:

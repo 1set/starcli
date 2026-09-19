@@ -51,7 +51,7 @@ build_windows:
 # nothing is published). Inspect the artifacts under dist/. `make build` stays
 # the fast single-platform dev build; this is for checking what a release ships.
 snapshot:
-	GOVERSION=`go env GOVERSION` $(GORUN) github.com/goreleaser/goreleaser/v2@latest release --snapshot --clean
+	GOVERSION=`go env GOVERSION` $(GORUN) github.com/goreleaser/goreleaser/v2@v2.18.2 release --snapshot --clean --skip=publish
 
 run: build
 	./$(BINARY)

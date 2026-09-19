@@ -25,10 +25,18 @@ import (
 	"time"
 )
 
-// binPath is the freshly built starcli binary, set up once in TestMain.
+// binPath is a freshly built binary or the installed release candidate.
 var binPath string
 
 func TestMain(m *testing.M) {
+	if candidate := os.Getenv("STARCLI_TEST_BINARY"); candidate != "" {
+		var err error
+		binPath, err = filepath.Abs(candidate)
+		if err != nil {
+			panic(err)
+		}
+		os.Exit(m.Run())
+	}
 	dir, err := os.MkdirTemp("", "starcli-e2e")
 	if err != nil {
 		panic(err)
