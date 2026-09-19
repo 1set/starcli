@@ -123,7 +123,7 @@ func TestModuleAllowed(t *testing.T) {
 	}{
 		// Safe tier: pure/log/process yes; net/fs/cmd no.
 		{safe, "math", true}, {safe, "json", true}, {safe, "log", true},
-		{safe, "runtime", true}, {safe, "sys", true}, {safe, "gum", true},
+		{safe, "runtime", false}, {safe, "sys", true}, {safe, "gum", false},
 		{safe, "markdown", true},
 		{safe, "http", false}, {safe, "net", false}, {safe, "web", false},
 		{safe, "email", false}, {safe, "llm", false}, {safe, "s3", false},
@@ -408,5 +408,36 @@ func TestBuildBoxConcurrentOptions(t *testing.T) {
 	wg.Wait()
 	if opts.execCmd {
 		t.Fatal("BuildBox mutated caller options")
+	}
+}
+
+// Process mutation and interactive subprocess paths need the same explicit
+// host execution grant as cmd, regardless of eager or lazy module loading.
+func TestProcessCapabilityBoundary(t *testing.T) {
+	for _, tier := range []string{"", "open", "safe", "network", "full"} {
+		for flags := 0; flags < 16; flags++ {
+			allowed := flags&4 != 0 || flags&8 != 0
+			for _, tc := range []struct{ module, member string }{
+				{"runtime", "putenv"}, {"runtime", "setenv"}, {"runtime", "unsetenv"},
+				{"gum", "write"}, {"gum", "spin"},
+			} {
+				for _, preload := range []bool{false, true} {
+					opts := &BoxOpts{scenario: scenarioDirect, printerName: "none", caps: tier,
+						allowNet: flags&1 != 0, allowFS: flags&2 != 0, allowCmd: flags&4 != 0, dangerous: flags&8 != 0}
+					opts.moduleToLoad = []string{tc.module}
+					script := fmt.Sprintf("load(%q, %q)", tc.module, tc.member)
+					if preload {
+						script = fmt.Sprintf("value = type(%s.%s)", tc.module, tc.member)
+					}
+					box, err := BuildBox(opts)
+					if err == nil {
+						_, err = box.Run(script)
+					}
+					if (err == nil) != allowed {
+						t.Errorf("tier=%q flags=%d %s.%s preload=%v: allowed=%v want=%v: %v", tier, flags, tc.module, tc.member, preload, err == nil, allowed, err)
+					}
+				}
+			}
+		}
 	}
 }

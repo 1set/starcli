@@ -6,12 +6,12 @@ import (
 	"github.com/1set/starlet"
 )
 
-// Capability classification for the opt-in capability load gate (CLI-01/M2).
-// starcli wires both starlet builtins and starpkg domain modules. The DEFAULT
-// posture is open — every wired module is loadable — so the CLI is convenient
-// out of the box. A host tightens it on purpose via --caps (safe|network|full)
-// / STAR_CAPS or the granular --allow-* flags; only then is a load gate
-// installed, admitting just the modules whose capabilities the grant permits.
+// Capability classification for the module load gate (CLI-01/M2).
+// starcli wires both starlet builtins and starpkg domain modules. The default
+// open tier grants network and filesystem access. Command execution, gum, and
+// runtime environment mutation require an explicit execution grant. Hosts can
+// narrow the grant with --caps (safe|network|full) / STAR_CAPS and widen it with
+// the granular --allow-* flags.
 //
 // Capabilities reuse starlet.ModuleCapability bits so builtins and starpkg
 // modules are judged on one scale. starlet builtins are classified by
@@ -26,7 +26,8 @@ const modCmd = "cmd"
 // starpkgCaps classifies the starpkg domain modules starcli wires. A module
 // absent here falls back to starlet.GetBuiltinModuleCapability.
 // A module's capability is the UNION of every builtin it exposes — a module is
-// as privileged as its sharpest tool. sqlite/web are dual-capability and so
+// as privileged as its sharpest tool. gum/runtime additionally require execCmd.
+// sqlite/web are dual-capability and so
 // require BOTH grants (or --caps full): they each cross the net<->fs line.
 var starpkgCaps = map[string]starlet.ModuleCapability{
 	"args":     starlet.CapPure,                            // argparse-style parsing of the captured argv
@@ -57,7 +58,7 @@ func moduleCaps(name string) (starlet.ModuleCapability, bool) {
 }
 
 // safeCaps is the most restrictive tier: pure computation (CapPure == 0),
-// logging, and process/runtime info — no network, no filesystem, no exec.
+// logging, and sys process info — no network, no filesystem, no exec.
 const safeCaps = starlet.CapLog | starlet.CapProcess
 
 // allCaps is every non-exec capability bit (the "open"/"full" reach).
@@ -121,17 +122,23 @@ func grantFromFlags(caps string, allowNet, allowFS, allowCmd, dangerous bool) ca
 }
 
 // unrestricted reports whether the grant permits everything (the default open
-// posture). A Box built under an unrestricted grant needs no load gate at all.
+// posture with an explicit execution grant). Other grants must gate gum and
+// runtime even when filesystem and network capabilities are open.
 func (g capGrant) unrestricted() bool {
-	return g.caps == allCaps && g.allowCmd
+	return g.caps == allCaps && g.execCmd
 }
 
 // moduleAllowed reports whether a module may load under this grant. cmd is gated
-// by allowCmd alone; an unknown module is denied (default deny); otherwise every
+// by allowCmd; gum/runtime require execCmd. Unknown modules are denied; every
 // capability bit the module needs must be granted.
 func (g capGrant) moduleAllowed(name string) bool {
 	if name == modCmd {
 		return g.allowCmd
+	}
+	// runtime mutates the process environment; gum can launch an editor, tmux,
+	// or a spinner command. Gate the entire modules before constructing them.
+	if name == "runtime" || name == "gum" {
+		return g.execCmd
 	}
 	c, ok := moduleCaps(name)
 	if !ok {

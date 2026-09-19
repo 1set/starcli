@@ -62,6 +62,11 @@ func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
 	if !validCapsTier(opts.caps) {
 		return nil, fmt.Errorf("unknown --caps value %q (want: open, full, network, or safe)", opts.caps)
 	}
+	for _, name := range opts.moduleToLoad {
+		if _, ok := moduleCaps(name); !ok {
+			return nil, fmt.Errorf("unknown module: %s", name)
+		}
+	}
 	grant := grantFromFlags(opts.caps, opts.allowNet, opts.allowFS, opts.allowCmd, opts.dangerous)
 	// The cmd loader (loadCLIModuleByName) constructs an enabled allow-all module
 	// only when the grant permits execution; otherwise cmd loads disabled.
