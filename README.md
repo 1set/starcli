@@ -72,7 +72,7 @@ Usage of ./starcli:
   -C, --config string           config file to load
       --dangerously-allow-all   DANGER: open everything — network + filesystem + host command execution of ANY command. Use only with fully trusted scripts.
   -g, --globalreassign          allow reassigning global variables in Starlark code (default true)
-  -I, --include string          include path for Starlark code to load modules from (default ".")
+  -I, --include string          grant load() this directory (default: CWD only with filesystem capability)
   -i, --interactive             enter interactive mode after executing
   -l, --log string              log level: debug, info, warn, error, dpanic, panic, fatal (default "info")
       --log-file string         append the script's log module output to this file
@@ -105,6 +105,14 @@ From a restrictive tier the granular flags widen the grant: `--allow-net`,
 everything it can do, so the dual-capability modules — `web` (HTTP **+**
 `static_dir`) and `sqlite` (DB **+** remote `connect_remote`) — need **both**
 `--allow-net` and `--allow-fs` (or `--caps full`).
+
+Local script imports follow a separate directory grant. The default open/full
+posture and `--allow-fs` include the working directory. `--caps safe` and
+`--caps network` do not implicitly expose it. An explicit `-I directory` grants
+`load()` access to that directory without enabling the `file` module. Parent
+traversal, absolute load names, and symlinks escaping the root are rejected;
+symlinks must be relative and remain inside the root. This is an intentional
+restriction compared with the previous `os.DirFS` behavior.
 
 **Host command execution (`cmd`) is the sharpest tool and is gated on its own.**
 The `cmd` module loads in the open posture, but `run()` is **disabled** — it

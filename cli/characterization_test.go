@@ -245,7 +245,7 @@ func baseArgs() *Args {
 	return &Args{
 		AllowGlobalReassign: true,
 		ModulesToLoad:       getDefaultModules(),
-		IncludePath:         ".",
+		IncludePath:         "",
 		LogLevel:            "panic",
 		OutputPrinter:       "auto",
 	}

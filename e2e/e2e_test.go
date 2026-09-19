@@ -41,6 +41,38 @@ func TestMain(m *testing.M) {
 
 func isWindows() bool { return os.PathSeparator == '\\' }
 
+func TestIncludeAuthorization(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "fixture.star"), []byte("value = 73"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name  string
+		flags []string
+		allow bool
+	}{
+		{"default open", nil, true},
+		{"safe has no implicit CWD", []string{"--caps", "safe"}, false},
+		{"network has no implicit CWD", []string{"--caps", "network"}, false},
+		{"explicit relative root", []string{"--caps", "safe", "-I", "."}, true},
+		{"explicit absolute root", []string{"--caps", "safe", "-I", dir}, true},
+		{"filesystem grant", []string{"--caps", "safe", "--allow-fs"}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			args := append(append([]string{}, tc.flags...), "-c", `load("fixture.star", "value"); print(value)`)
+			cmd := exec.Command(binPath, args...)
+			cmd.Dir = dir
+			out, err := cmd.CombinedOutput()
+			if (err == nil) != tc.allow {
+				t.Fatalf("exit=%v, allowed=%v: %s", err, tc.allow, out)
+			}
+			if tc.allow && !strings.Contains(string(out), "73") {
+				t.Fatalf("missing loaded value: %s", out)
+			}
+		})
+	}
+}
+
 // runCLI runs the built binary with args and optional stdin, returning stdout,
 // stderr, and the exit code.
 func runCLI(t *testing.T, stdin string, args ...string) (stdout, stderr string, exit int) {
