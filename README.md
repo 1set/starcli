@@ -333,7 +333,7 @@ host_name: MyStarCLIServer
 
 ### Prerequisites
 
-- Go 1.25 or later
+- Go 1.26.8 or later (prebuilt binaries do not require a Go installation)
 
 ### Building
 
