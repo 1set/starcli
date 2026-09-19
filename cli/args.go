@@ -2,6 +2,7 @@ package cli
 
 import (
 	"os"
+	"time"
 
 	flag "github.com/spf13/pflag"
 )
@@ -15,6 +16,10 @@ type Args struct {
 	FileName            string
 	CodeContent         string
 	WebPort             uint16
+	WebHost             string
+	WebMaxBody          int64
+	WebMaxConcurrent    int
+	WebTimeout          time.Duration
 	NumberOfArgs        int
 	Arguments           []string
 	LogLevel            string
@@ -46,6 +51,10 @@ func ParseArgs() *Args {
 	flag.StringVarP(&args.IncludePath, "include", "I", "", "grant load() this directory (default: CWD only with filesystem capability)")
 	flag.StringVarP(&args.CodeContent, "code", "c", "", "Starlark code to execute")
 	flag.Uint16VarP(&args.WebPort, "web", "w", 0, "run web server on specified port, it provides request and response structs for Starlark code to use")
+	flag.StringVar(&args.WebHost, "web-host", "127.0.0.1", "web bind address (remote access requires an explicit host)")
+	flag.Int64Var(&args.WebMaxBody, "web-max-body", 1<<20, "maximum web request body bytes (positive)")
+	flag.IntVar(&args.WebMaxConcurrent, "web-max-concurrency", 16, "maximum admitted web requests (positive)")
+	flag.DurationVar(&args.WebTimeout, "web-timeout", 15*time.Second, "web request execution deadline (positive)")
 	flag.StringVarP(&args.LogLevel, "log", "l", "info", "log level: debug, info, warn, error, dpanic, panic, fatal")
 	flag.BoolVarP(&args.ShowVersion, "version", "V", false, "print version & build information")
 	flag.BoolVarP(&args.InteractiveMode, "interactive", "i", false, "enter interactive mode after executing")

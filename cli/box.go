@@ -56,6 +56,9 @@ type BoxOpts struct {
 // --caps tier / STAR_CAPS or an --allow-* flag installs a capability load gate so
 // only the permitted modules may be loaded.
 func BuildBox(opts *BoxOpts) (*starbox.Starbox, error) {
+	// Each box owns its derived options; HTTP requests may build concurrently.
+	owned := *opts
+	opts = &owned
 	if !validCapsTier(opts.caps) {
 		return nil, fmt.Errorf("unknown --caps value %q (want: open, full, network, or safe)", opts.caps)
 	}

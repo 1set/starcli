@@ -1,12 +1,16 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/1set/starbox"
 	"github.com/1set/starcli/config"
@@ -21,7 +25,6 @@ import (
 func runWebServer(args *Args) error {
 	var (
 		runner        = starbox.NewRunConfig()
-		webPort       = args.WebPort
 		numArg        = args.NumberOfArgs
 		useDirectCode = strings.TrimSpace(args.CodeContent) != ""
 	)
@@ -51,7 +54,16 @@ func runWebServer(args *Args) error {
 		b, _ := BuildBox(opt)
 		return runner.Starbox(b)
 	}
-	return web.Start(webPort, build)
+	cfg := web.DefaultConfig(args.WebPort)
+	if args.WebHost != "" {
+		cfg.Address = net.JoinHostPort(args.WebHost, fmt.Sprint(args.WebPort))
+	}
+	cfg.MaxBodyBytes = args.WebMaxBody
+	cfg.MaxConcurrent = args.WebMaxConcurrent
+	cfg.RequestTimeout = args.WebTimeout
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	return web.StartContext(ctx, cfg, build)
 }
 
 func runDirectCode(args *Args) error {
