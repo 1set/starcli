@@ -17,11 +17,11 @@ jobs:
     # Star* module's pipeline. Pinned to a commit SHA for supply-chain safety;
     # bump the pin when meta's workflow changes (Dependabot github-actions can
     # automate this).
-    uses: 1set/meta/.github/workflows/go-ci.yml@496f38088eff1a37bae1b43d158146a8a9d83a37
+    uses: 1set/meta/.github/workflows/go-ci.yml@23f088bcd6dce16c93e0056d7b70b4f4434208e8
     with:
       # Match go.mod's compatibility floor; the shared workflow also tests
       # the current stable Go release.
-      go-floor: "1.25"
+      go-floor: "1.26"
       # Test-coverage ratchet (covcheck). The CLI-R0 characterization suite
       # brought total statement coverage to ~69.5% (cli 68.9 / config 94.1 /
       # util 92.7 / sys 77.8; main.go and web/ are the uncovered remainder).
