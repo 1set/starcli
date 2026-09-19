@@ -1,39 +1,162 @@
 name: Release
 
-# Build and publish cross-platform binaries when a vX.Y.Z tag is pushed.
-# The tag itself is still cut by a human (after maintainer confirmation) — this
-# workflow only turns an existing tag into prebuilt archives + a GitHub Release.
+# Build once, test those archives natively, then publish the same bytes.
+# Maintainers approve the annotated tag and its release notes before pushing it.
 on:
   push:
-    tags:
-      - "v*"
+    branches: ["master"]
+    tags: ["v*"]
+  pull_request:
+    branches: ["master"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  goreleaser:
+  package:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0 # full history for the changelog
+          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-go@v6
         with:
           go-version: "1.27.1"
       - name: Check source vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
-      - name: Capture Go version
-        # GoReleaser has no built-in go-version var; expose it for the ldflags.
-        # Use `go env GOVERSION` (e.g. go1.25.9) — a single token, since ldflag
-        # values must not contain spaces (`go version ...` would break linking).
-        run: echo "GOVERSION=$(go env GOVERSION)" >> "$GITHUB_ENV"
-      - name: Run GoReleaser
-        # Third-party action pinned to a full commit SHA (supply-chain policy).
+      - name: Select release or snapshot build
+        run: |
+          echo "GOVERSION=$(go env GOVERSION)" >> "$GITHUB_ENV"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            test "$(git cat-file -t "$GITHUB_REF")" = tag
+            echo 'RELEASE_ARGS=release --clean --skip=publish' >> "$GITHUB_ENV"
+          else
+            echo 'RELEASE_ARGS=release --snapshot --clean --skip=publish' >> "$GITHUB_ENV"
+          fi
+      - name: Build archives without publishing
         uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
         with:
           distribution: goreleaser
           version: "v2.18.2"
-          args: release --clean
+          args: ${{ env.RELEASE_ARGS }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Read the packaged version
+        id: version
+        run: |
+          python3 - <<'PY'
+          import json, os
+          with open('dist/metadata.json') as source:
+              version = json.load(source)['version']
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              print('version=' + version, file=output)
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-archives
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
+
+  install:
+    needs: package
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux_amd64.tar.gz
+          - os: ubuntu-22.04-arm
+            target: linux_arm64.tar.gz
+          - os: macos-15-intel
+            target: macOS_amd64.tar.gz
+          - os: macos-14
+            target: macOS_arm64.tar.gz
+          - os: windows-2022
+            target: windows_amd64.zip
+          - os: windows-11-arm
+            target: windows_arm64.zip
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.1"
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-archives
+          path: dist
+      - name: Download the rollback baseline package
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_ARCHIVE: starcli_0.1.2_${{ matrix.target }}
+        run: |
+          gh release download v0.1.2 --repo "$GITHUB_REPOSITORY" --dir previous \
+            --pattern checksums.txt --pattern "$PREVIOUS_ARCHIVE"
+      - name: Verify checksums, installation, upgrade and rollback
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.package.outputs.version }}
+        run: python e2e/verify-release.py dist "$RELEASE_VERSION" previous 0.1.2
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [package, install]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-archives
+          path: dist
+      - name: Verify the bytes received for publication
+        working-directory: dist
+        run: sha256sum --check checksums.txt
+      - name: Attest the tested archives
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
+      - name: Publish with the approved annotated tag notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git cat-file -t "$GITHUB_REF")" = tag
+          release_title=$(git for-each-ref --format='%(contents:subject)' "$GITHUB_REF")
+          git for-each-ref --format='%(contents:body)' "$GITHUB_REF" > release-notes.md
+          test -n "$release_title"
+          test -n "$(tr -d '[:space:]' < release-notes.md)"
+          # No --clobber: a retry cannot overwrite an existing release.
+          extra=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then extra+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/*.zip dist/checksums.txt \
+            --verify-tag --title "$release_title" --notes-file release-notes.md --draft "${extra[@]}"
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            gh release edit "$GITHUB_REF_NAME" --draft=false --prerelease
+          else
+            gh release edit "$GITHUB_REF_NAME" --draft=false --latest
+          fi

@@ -2,13 +2,14 @@
 # CLI can be installed without a Go toolchain. Validate/iterate locally with:
 #   go run github.com/goreleaser/goreleaser/v2@v2.18.2 check
 #   go run github.com/goreleaser/goreleaser/v2@v2.18.2 release --snapshot --clean --skip=publish
-# Releases are produced on a vX.Y.Z tag by .github/workflows/release.yml.
+# .github/workflows/release.yml tests these archives before uploading them on
+# an approved annotated vX.Y.Z tag; local snapshots never publish.
 version: 2
 
 project_name: starcli
 
 # GoVersion isn't a built-in GoReleaser template var, so the release workflow
-# exports `GOVERSION=$(go version)` into the env; this entry surfaces it (and
+# exports `GOVERSION=$(go env GOVERSION)` into the env; this entry surfaces it (and
 # stays empty for a local `--snapshot` where it isn't set, rather than erroring).
 env:
   - GOVERSION={{ if index .Env "GOVERSION" }}{{ .Env.GOVERSION }}{{ end }}
