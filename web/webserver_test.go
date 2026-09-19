@@ -215,6 +215,9 @@ func TestServerLifecycleAndLimits(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg.Address = listener.Addr().String()
+	if err := Start(uint16(listener.Addr().(*net.TCPAddr).Port), builderFor("pass")); err == nil {
+		t.Error("legacy Start accepted an occupied listener")
+	}
 	// Starting on an occupied address must return to the host, never exit it.
 	if err := StartContext(context.Background(), cfg, builderFor("pass")); err == nil {
 		t.Error("occupied address accepted")

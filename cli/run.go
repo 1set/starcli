@@ -23,6 +23,12 @@ import (
 
 // runWebServer starts a web server that creates a Starbox with given code for each request.
 func runWebServer(args *Args) error {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	return runWebServerContext(ctx, args)
+}
+
+func runWebServerContext(ctx context.Context, args *Args) error {
 	var (
 		runner        = starbox.NewRunConfig()
 		numArg        = args.NumberOfArgs
@@ -35,7 +41,13 @@ func runWebServer(args *Args) error {
 		runner = runner.FileName("web.star").Script(args.CodeContent)
 	} else if numArg >= 1 {
 		// or use the first argument as file name
-		runner = runner.FileName(args.Arguments[0])
+		// The entry file is an explicit host input, independent of load() roots.
+		// Read it once so every request executes the same host-selected source.
+		source, err := os.ReadFile(args.Arguments[0])
+		if err != nil {
+			return err
+		}
+		runner = runner.FileName(args.Arguments[0]).Script(string(source))
 	} else {
 		// no repl mode for web server, just quit if no code if provided
 		return errors.New("no code to run as web server")
@@ -61,8 +73,6 @@ func runWebServer(args *Args) error {
 	cfg.MaxBodyBytes = args.WebMaxBody
 	cfg.MaxConcurrent = args.WebMaxConcurrent
 	cfg.RequestTimeout = args.WebTimeout
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
 	return web.StartContext(ctx, cfg, build)
 }
 
