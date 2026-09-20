@@ -106,9 +106,11 @@ def verify_terminal_recording(binary, directory):
     if os.name != "posix":
         print("PTY recording test requires Unix; portable recording is covered by e2e", flush=True)
         return
+    import errno
     import pty
     import select
     import signal
+    import termios
     import time
 
     for mode, flags in (("repl", []), ("inspect", ["-i", "-c", "value = 40"])):
@@ -119,18 +121,27 @@ def verify_terminal_recording(binary, directory):
             os.execv(str(binary), [str(binary), "--caps", "safe", "--record", str(transcript), *flags])
         output = bytearray()
 
+        def read_output(timeout):
+            if not select.select([fd], [], [], timeout)[0]:
+                return
+            try:
+                output.extend(os.read(fd, 65536))
+            except OSError as error:
+                # Linux reports EIO when the child closes its terminal.
+                if error.errno != errno.EIO:
+                    raise
+            if len(output) > 1024 * 1024:
+                raise RuntimeError("unexpectedly large terminal output")
+
         def receive(token, start=0):
             deadline = time.monotonic() + 10
             while time.monotonic() < deadline:
-                if token in output[start:]:
+                # readline leaves raw mode while evaluating a command. Wait
+                # for the next read before sending control keys: canonical
+                # terminal handling can otherwise consume EOF prematurely.
+                if token in output[start:] and not termios.tcgetattr(fd)[3] & termios.ICANON:
                     return
-                if select.select([fd], [], [], 0.1)[0]:
-                    chunk = os.read(fd, 65536)
-                    if not chunk:
-                        break
-                    output.extend(chunk)
-                    if len(output) > 1024 * 1024:
-                        raise RuntimeError("unexpectedly large terminal output")
+                read_output(0.1)
             raise RuntimeError(f"missing terminal output {token!r}: {bytes(output)!r}")
 
         try:
@@ -154,9 +165,11 @@ def verify_terminal_recording(binary, directory):
                     if os.waitstatus_to_exitcode(status) != 0:
                         raise RuntimeError(f"terminal session failed: {status}")
                     break
-                time.sleep(0.05)
+                # Drain the terminal until exit, including final prompt/echo
+                # bytes, so the child cannot block on its output buffer.
+                read_output(0.05)
             else:
-                raise RuntimeError("terminal session did not exit after EOF")
+                raise RuntimeError(f"terminal session did not exit after EOF: {bytes(output[-4096:])!r}")
             data = transcript.read_text()
             for expected in (">>> ", "recorded 42", "fail: terminal failure", "recovered 42", "after interrupt 42"):
                 if expected not in data:
