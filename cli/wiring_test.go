@@ -295,7 +295,17 @@ func TestRecordClosesDescriptors(t *testing.T) {
 	}
 	oldGC := debug.SetGCPercent(-1)
 	defer debug.SetGCPercent(oldGC)
-	before, err := os.ReadDir("/dev/fd")
+	listDescriptors := func() ([]string, error) {
+		dir, err := os.Open("/dev/fd")
+		if err != nil {
+			return nil, err
+		}
+		defer dir.Close()
+		// Enumerate names only: statting the virtual entries can race a
+		// descriptor closing, and older Darwin toolchains report EBADF.
+		return dir.Readdirnames(-1)
+	}
+	before, err := listDescriptors()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,7 +319,7 @@ func TestRecordClosesDescriptors(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	after, err := os.ReadDir("/dev/fd")
+	after, err := listDescriptors()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -400,8 +410,10 @@ func TestRecordSetupFailure(t *testing.T) {
 				t.Fatal("failed setup changed streams")
 			}
 			for _, f := range files {
-				if _, err := f.Stat(); !errors.Is(err, os.ErrClosed) {
-					t.Errorf("pipe remained open: %v", err)
+				// Close must fail once the recording has already closed it.
+				// Stat's error for a closed Windows handle is not os.ErrClosed.
+				if err := f.Close(); err == nil {
+					t.Error("pipe remained open")
 				}
 			}
 		})
@@ -465,8 +477,8 @@ func TestRecordDrainAndClose(t *testing.T) {
 				t.Error("recording failure truncated live output")
 			}
 			for _, file := range files {
-				if _, err := file.Stat(); !errors.Is(err, os.ErrClosed) {
-					t.Errorf("pipe remained open: %v", err)
+				if err := file.Close(); err == nil {
+					t.Error("pipe remained open")
 				}
 			}
 		})
