@@ -6,6 +6,7 @@ require (
 	bitbucket.org/ai69/colorlogo v0.1.3
 	github.com/1set/starbox v0.2.0
 	github.com/1set/starlet v0.2.3
+	github.com/chzyer/readline v1.5.1
 	github.com/kyokomi/emoji/v2 v2.2.13
 	github.com/samber/lo v1.50.0
 	github.com/spf13/pflag v1.0.5
@@ -59,7 +60,6 @@ require (
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
-	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/coder/websocket v1.8.12 // indirect

@@ -7,15 +7,23 @@ package cli
 // Sections:
 //   - exit-code classification (success / eval / syntax / compile)
 //   - execution budgets (--max-steps / --max-output)
+//   - session recording (terminal streams, failures, resource cleanup)
 //   - check mode (--check: resolve without executing)
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"runtime/debug"
 	"strings"
 	"testing"
 
 	"github.com/1set/starbox"
+	"github.com/chzyer/readline"
 )
 
 func TestProcess_ExitCodeClassification(t *testing.T) {
@@ -234,6 +242,269 @@ func TestProcess_Record_CapturesErrors(t *testing.T) {
 	data, _ := os.ReadFile(recPath)
 	if !strings.Contains(string(data), "floored division by zero") {
 		t.Errorf("transcript %q missing the error", string(data))
+	}
+}
+
+type recordingBuffer struct {
+	bytes.Buffer
+	closes int
+}
+
+func (b *recordingBuffer) Close() error { b.closes++; return nil }
+
+func TestRecordReadlineStreams(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "session.txt")
+	out, stderr := &recordingBuffer{}, &recordingBuffer{}
+	origOut, origErr := readline.Stdout, readline.Stderr
+	readline.Stdout, readline.Stderr = out, stderr
+	defer func() { readline.Stdout, readline.Stderr = origOut, origErr }()
+	stop, err := startRecording(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Fprint(readline.Stdout, ">>> input echo\n")
+	fmt.Fprint(readline.Stderr, "terminal error\n")
+	_ = readline.Stdout.Close()
+	_ = readline.Stderr.Close()
+	if err := stop(); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{">>> input echo", "terminal error"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("recording omitted %q: %q", want, data)
+		}
+	}
+	if out.String() != ">>> input echo\n" || stderr.String() != "terminal error\n" {
+		t.Fatalf("live terminal streams changed: %q / %q", out.String(), stderr.String())
+	}
+	if readline.Stdout != out || readline.Stderr != stderr {
+		t.Fatal("terminal streams were not restored")
+	}
+	if out.closes != 0 || stderr.closes != 0 {
+		t.Fatal("recording closed borrowed terminal streams")
+	}
+}
+
+func TestRecordClosesDescriptors(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("descriptor inventory is available on Unix")
+	}
+	oldGC := debug.SetGCPercent(-1)
+	defer debug.SetGCPercent(oldGC)
+	listDescriptors := func() ([]string, error) {
+		dir, err := os.Open("/dev/fd")
+		if err != nil {
+			return nil, err
+		}
+		defer dir.Close()
+		// Enumerate names only: statting the virtual entries can race a
+		// descriptor closing, and older Darwin toolchains report EBADF.
+		return dir.Readdirnames(-1)
+	}
+	before, err := listDescriptors()
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "session.txt")
+	for i := 0; i < 20; i++ {
+		stop, err := startRecording(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := stop(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	after, err := listDescriptors()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Allow the runtime poller to initialize; transcript pipes must not
+	// accumulate until a garbage collection happens to close them.
+	if len(after) > len(before)+2 {
+		t.Fatalf("recording leaked descriptors: before=%d after=%d", len(before), len(after))
+	}
+}
+
+func TestProcessRecordWriteFailure(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("/dev/full provides the disk-full fixture on Linux")
+	}
+	a := baseArgs()
+	a.Record = "/dev/full"
+	a.CodeContent = `print("must not run")`
+	var code int
+	out, stderr := captureStd(t, func() { code = Process(a) })
+	if code != exitError || !strings.Contains(stderr, "record:") || strings.Contains(out, "must not run") {
+		t.Fatalf("record write failure: exit=%d stdout=%q stderr=%q", code, out, stderr)
+	}
+}
+
+func TestProcessRecordPathErrors(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "file")
+	if err := os.WriteFile(file, []byte("fixture"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{dir, filepath.Join(file, "nested", "session.txt")} {
+		a := baseArgs()
+		a.Record = path
+		a.CodeContent = `print("must not run")`
+		var code int
+		out, stderr := captureStd(t, func() { code = Process(a) })
+		if code != exitError || out != "" || !strings.Contains(stderr, "record:") {
+			t.Errorf("path=%q: exit=%d stdout=%q stderr=%q", path, code, out, stderr)
+		}
+	}
+}
+
+type recordingFile struct {
+	write func([]byte) (int, error)
+	close func() error
+}
+
+func (f recordingFile) Write(p []byte) (int, error) { return f.write(p) }
+func (f recordingFile) Close() error                { return f.close() }
+
+func TestRecordSetupFailure(t *testing.T) {
+	for _, failAt := range []int{-1, 0, 1, 2} {
+		t.Run(fmt.Sprint(failAt), func(t *testing.T) {
+			var files []*os.File
+			calls, closes := 0, 0
+			f := recordingFile{
+				write: func(p []byte) (int, error) {
+					if failAt == -1 {
+						return len(p) - 1, nil
+					}
+					if failAt == 0 {
+						return 0, io.ErrClosedPipe
+					}
+					return len(p), nil
+				},
+				close: func() error { closes++; return nil },
+			}
+			out, stderr, termOut, termErr := os.Stdout, os.Stderr, readline.Stdout, readline.Stderr
+			stop, err := recordTo(f, func() (*os.File, *os.File, error) {
+				calls++
+				if calls == failAt {
+					return nil, nil, io.ErrClosedPipe
+				}
+				r, w, err := os.Pipe()
+				if err == nil {
+					files = append(files, r, w)
+				}
+				return r, w, err
+			})
+			wantErr := io.ErrClosedPipe
+			if failAt == -1 {
+				wantErr = io.ErrShortWrite
+			}
+			if !errors.Is(err, wantErr) || stop != nil || closes != 1 {
+				t.Fatalf("setup: err=%v has-stop=%v closes=%d", err, stop != nil, closes)
+			}
+			if os.Stdout != out || os.Stderr != stderr || readline.Stdout != termOut || readline.Stderr != termErr {
+				t.Fatal("failed setup changed streams")
+			}
+			for _, f := range files {
+				// Close must fail once the recording has already closed it.
+				// Stat's error for a closed Windows handle is not os.ErrClosed.
+				if err := f.Close(); err == nil {
+					t.Error("pipe remained open")
+				}
+			}
+		})
+	}
+}
+
+func TestRecordDrainAndClose(t *testing.T) {
+	for _, mode := range []string{"success", "write failure", "short write", "close failure", "stdout failure", "stderr failure"} {
+		t.Run(mode, func(t *testing.T) {
+			var files []*os.File
+			writes, closes := 0, 0
+			f := recordingFile{
+				write: func(p []byte) (int, error) {
+					writes++
+					if writes > 1 && mode == "write failure" {
+						return 0, io.ErrClosedPipe
+					}
+					if writes > 1 && mode == "short write" {
+						return len(p) - 1, nil
+					}
+					return len(p), nil
+				},
+				close: func() error {
+					closes++
+					if mode == "close failure" {
+						return io.ErrClosedPipe
+					}
+					return nil
+				},
+			}
+			var stopErr, againErr error
+			payload := strings.Repeat("record payload\n", 10000)
+			out, stderr := captureStd(t, func() {
+				if mode == "stdout failure" {
+					_ = os.Stdout.Close()
+				}
+				if mode == "stderr failure" {
+					_ = os.Stderr.Close()
+				}
+				stop, err := recordTo(f, func() (*os.File, *os.File, error) {
+					r, w, err := os.Pipe()
+					if err == nil {
+						files = append(files, r, w)
+					}
+					return r, w, err
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, _ = io.WriteString(os.Stdout, payload)
+				_, _ = io.WriteString(os.Stderr, payload)
+				stopErr, againErr = stop(), stop()
+			})
+			if (stopErr == nil) != (mode == "success") || stopErr != againErr || closes != 1 {
+				t.Errorf("stop=%v again=%v closes=%d", stopErr, againErr, closes)
+			}
+			if mode == "short write" && !errors.Is(stopErr, io.ErrShortWrite) {
+				t.Errorf("short write was not reported: %v", stopErr)
+			}
+			if mode != "stdout failure" && out != payload || mode != "stderr failure" && stderr != payload {
+				t.Error("recording failure truncated live output")
+			}
+			for _, file := range files {
+				if err := file.Close(); err == nil {
+					t.Error("pipe remained open")
+				}
+			}
+		})
+	}
+}
+
+func TestFinishRecordingExitCodes(t *testing.T) {
+	for code := exitOK; code <= exitOutputLimit; code++ {
+		for _, fail := range []bool{false, true} {
+			var got int
+			_, stderr := captureStd(t, func() {
+				got = finishRecording(func() error {
+					if fail {
+						return errors.New("record: fixture failure")
+					}
+					return nil
+				}, code)
+			})
+			want := code
+			if fail && code == exitOK {
+				want = exitError
+			}
+			if got != want || strings.Contains(stderr, "record: fixture failure") != fail {
+				t.Errorf("code=%d fail=%v: got=%d stderr=%q", code, fail, got, stderr)
+			}
+		}
 	}
 }
 

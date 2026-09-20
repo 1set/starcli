@@ -312,6 +312,11 @@ $ ./starcli --log-file run.log --log-format json job.star
 interaction and errors — to a transcript file (appended, with a timestamped
 session header), while still showing it live. Handy for replay and review.
 
+REPL prompts and input echoes are included, so terminal transcripts can contain
+ANSI control sequences. Recording errors produce a non-zero exit status; an
+existing script error keeps its original exit code. If recording fails during
+execution, output continues to drain and the failure is reported at shutdown.
+
 ```bash
 $ ./starcli --record session.log job.star      # works in REPL mode too
 $ cat session.log

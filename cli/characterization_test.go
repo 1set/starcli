@@ -47,10 +47,14 @@ func captureStd(t *testing.T, f func()) (stdout, stderr string) {
 	if err != nil {
 		t.Fatalf("pipe: %v", err)
 	}
+	defer rOut.Close()
+	defer wOut.Close()
 	rErr, wErr, err := os.Pipe()
 	if err != nil {
 		t.Fatalf("pipe: %v", err)
 	}
+	defer rErr.Close()
+	defer wErr.Close()
 	os.Stdout, os.Stderr = wOut, wErr
 	outC, errC := make(chan string), make(chan string)
 	go func() { var b bytes.Buffer; _, _ = io.Copy(&b, rOut); outC <- b.String() }()

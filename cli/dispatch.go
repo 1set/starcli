@@ -24,7 +24,7 @@ const (
 
 // Process routes the parsed arguments to the desired run mode and returns the
 // process exit code.
-func Process(args *Args) int {
+func Process(args *Args) (code int) {
 	// optionally record the whole session (stdout+stderr) to a transcript file
 	if args.Record != "" {
 		stop, err := startRecording(args.Record)
@@ -32,7 +32,7 @@ func Process(args *Args) int {
 			fmt.Fprintln(os.Stderr, err)
 			return exitError
 		}
-		defer stop()
+		defer func() { code = finishRecording(stop, code) }()
 	}
 
 	// for basic checks
