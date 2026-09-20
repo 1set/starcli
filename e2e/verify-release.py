@@ -75,8 +75,12 @@ def verify_archives(directory, version, *, native_only=False):
                     if member.name == binary and not member.mode & 0o111:
                         raise ValueError(f"binary is not executable: {name}")
                     members[member.name] = package.extractfile(member).read()
-        if members.keys() != {binary, "README.md", "LICENSE"} or not all(members.values()):
-            raise ValueError(f"archive must contain only a binary, README and license: {name}")
+        required_members = {binary, "README.md", "LICENSE", "SECURITY.md"}
+        # The immutable rollback baseline predates the packaged security policy.
+        if version == "0.1.2":
+            required_members.remove("SECURITY.md")
+        if members.keys() != required_members or not all(members.values()):
+            raise ValueError(f"archive must contain exactly {sorted(required_members)}: {name}")
         if (system, arch) == target:
             native_binary = members[binary]
         print(f"verified {name}", flush=True)

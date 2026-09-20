@@ -65,6 +65,7 @@ archives:
       {{- if eq .Os "darwin" }}macOS{{ else }}{{ .Os }}{{ end }}_{{ .Arch }}
     files:
       - README.md
+      - SECURITY.md
       - LICENSE*
 
 checksum:
