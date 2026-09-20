@@ -9,6 +9,26 @@ on:
 permissions: read-all
 
 jobs:
+  compatibility:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.1"
+      - name: Verify the pinned interpreter
+        run: test "$(go list -m -f '{{.Version}}' go.starlark.net)" = "v0.0.0-20260324133313-ffb3f39dd27a"
+      - name: Guard the compatible crypto dependency boundary
+        # v0.55.0 keeps Go 1.25 support. Its SSH/OpenPGP packages must not enter
+        # this application's build or tests; their advisories need a separate
+        # dependency and compatibility review before either package is used.
+        run: |
+          go list -deps -test ./... > "$RUNNER_TEMP/crypto-imports.txt"
+          if grep -E '^golang.org/x/crypto/(ssh|openpgp)(/|$)' "$RUNNER_TEMP/crypto-imports.txt"; then
+            echo "Review the crypto version before adding SSH or OpenPGP dependencies"
+            exit 1
+          fi
+
   container:
     runs-on: ubuntu-22.04
     timeout-minutes: 15
@@ -38,7 +58,7 @@ jobs:
     with:
       # Match go.mod's compatibility floor; the shared workflow also tests
       # the current stable Go release.
-      go-floor: "1.26"
+      go-floor: "1.25"
       # Test-coverage ratchet (covcheck). The CLI-R0 characterization suite
       # brought total statement coverage to ~69.5% (cli 68.9 / config 94.1 /
       # util 92.7 / sys 77.8; main.go and web/ are the uncovered remainder).

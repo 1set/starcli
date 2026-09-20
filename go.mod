@@ -1,6 +1,6 @@
 module github.com/1set/starcli
 
-go 1.26.8
+go 1.25.8
 
 require (
 	bitbucket.org/ai69/colorlogo v0.1.3
@@ -25,7 +25,7 @@ require (
 	github.com/starpkg/totp v0.1.0
 	github.com/starpkg/web v0.1.0
 	github.com/starpkg/yaml v0.1.0
-	go.starlark.net v0.0.0-20260708150628-5395d018f003
+	go.starlark.net v0.0.0-20260324133313-ffb3f39dd27a
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/sys v0.47.0
@@ -119,7 +119,7 @@ require (
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/crypto v0.56.0 // indirect
+	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
