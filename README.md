@@ -37,7 +37,9 @@ StarCLI is a versatile tool that provides a convenient environment for running S
 
 Download the archive for your system and `checksums.txt` from the same
 [GitHub Release](https://github.com/1set/starcli/releases). No Go installation is
-needed to run a release binary.
+needed to run a release binary. Starting with v0.1.3, each archive includes the README, license, and
+[security policy](SECURITY.md), including the supported execution boundary and
+private vulnerability reporting instructions.
 
 | System | Architecture | Archive suffix |
 |---|---|---|
@@ -423,7 +425,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Contact
 
-For any questions or support, please open an issue on [GitHub](https://github.com/1set/starcli/issues).
+For ordinary bugs, questions, or support, please open an issue on [GitHub](https://github.com/1set/starcli/issues).
+For vulnerabilities, follow the private reporting instructions in [SECURITY.md](SECURITY.md).
 
 ### HTTP execution limits
 
