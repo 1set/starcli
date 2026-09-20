@@ -334,6 +334,24 @@ func TestProcessRecordWriteFailure(t *testing.T) {
 	}
 }
 
+func TestProcessRecordPathErrors(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "file")
+	if err := os.WriteFile(file, []byte("fixture"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{dir, filepath.Join(file, "nested", "session.txt")} {
+		a := baseArgs()
+		a.Record = path
+		a.CodeContent = `print("must not run")`
+		var code int
+		out, stderr := captureStd(t, func() { code = Process(a) })
+		if code != exitError || out != "" || !strings.Contains(stderr, "record:") {
+			t.Errorf("path=%q: exit=%d stdout=%q stderr=%q", path, code, out, stderr)
+		}
+	}
+}
+
 type recordingFile struct {
 	write func([]byte) (int, error)
 	close func() error
