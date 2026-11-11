@@ -1,6 +1,6 @@
 module github.com/1set/starcli
 
-go 1.25.8
+go 1.26.0
 
 require (
 	bitbucket.org/ai69/colorlogo v0.1.3
@@ -20,7 +20,7 @@ require (
 	github.com/starpkg/llm v0.1.0
 	github.com/starpkg/markdown v0.1.0
 	github.com/starpkg/qrcode v0.1.0
-	github.com/starpkg/sqlite v0.2.1
+	github.com/starpkg/sqlite v0.2.2-0.20260923164825-56739df72ba2
 	github.com/starpkg/toml v0.1.0
 	github.com/starpkg/totp v0.1.0
 	github.com/starpkg/web v0.1.0
@@ -28,8 +28,8 @@ require (
 	go.starlark.net v0.0.0-20260324133313-ffb3f39dd27a
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
-	golang.org/x/sys v0.47.0
-	golang.org/x/term v0.45.0
+	golang.org/x/sys v0.49.0
+	golang.org/x/term v0.47.0
 )
 
 require (
@@ -119,11 +119,11 @@ require (
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.58.1-0.20261009181718-2f1f834330b2 // indirect
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
-	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

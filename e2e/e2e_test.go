@@ -5,7 +5,7 @@
 // *work* through the CLI, not merely that they load.
 //
 // Sections: local imports, golden scripts, domain modules, stdin, recordings,
-// containers.
+// containers, SQLite custom-function authorization.
 package e2e
 
 import (
@@ -377,4 +377,38 @@ func TestContainer(t *testing.T) {
 			t.Fatalf("graceful exit: %v: %s", err, out)
 		}
 	})
+}
+
+// TestSQLiteCustomFunctionAuthorization exercises real argument parsing and the
+// production module registry, including SQL calls after the explicit opt-in.
+func TestSQLiteCustomFunctionAuthorization(t *testing.T) {
+	const code = `
+load("sqlite", "connect", "register_function")
+register_function("starcli_e2e_answer", lambda: 73, num_args=0)
+db = connect(":memory:")
+print(db.query_one("SELECT starcli_e2e_answer() AS result")["result"])
+db.close()
+`
+	for _, tc := range []struct {
+		name    string
+		flags   []string
+		allowed bool
+	}{
+		{"default", nil, false},
+		{"full tier", []string{"--caps", "full"}, false},
+		{"command grant", []string{"--allow-cmd"}, false},
+		{"fully trusted", []string{"--dangerously-allow-all"}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			args := append(append([]string{}, tc.flags...), "-o", "stdout", "-c", code)
+			stdout, stderr, exit := runCLI(t, "", args...)
+			if tc.allowed {
+				if exit != 0 || !strings.Contains(stdout, "73") {
+					t.Fatalf("trusted custom function: exit=%d stdout=%q stderr=%q", exit, stdout, stderr)
+				}
+			} else if exit == 0 || !strings.Contains(stderr, "custom functions are disabled by the host") {
+				t.Fatalf("custom function requires the trusted-script grant: exit=%d stdout=%q stderr=%q", exit, stdout, stderr)
+			}
+		})
+	}
 }
