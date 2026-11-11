@@ -66,7 +66,7 @@ func ParseArgs() *Args {
 	flag.BoolVar(&args.AllowNet, "allow-net", false, "widen a restrictive tier with network modules (http, net, email, llm)")
 	flag.BoolVar(&args.AllowFS, "allow-fs", false, "widen a restrictive tier with filesystem modules (file, path)")
 	flag.BoolVar(&args.AllowCmd, "allow-cmd", false, "allow ANY host command, gum subprocesses, and runtime environment mutation (trusted scripts only)")
-	flag.BoolVar(&args.Dangerous, "dangerously-allow-all", false, "DANGER: open everything — network + filesystem + host command execution of ANY command. Use only with fully trusted scripts.")
+	flag.BoolVar(&args.Dangerous, "dangerously-allow-all", false, "DANGER: open network, filesystem, arbitrary host commands, and SQLite custom functions. Fully trusted scripts only.")
 	flag.BoolVar(&args.Check, "check", false, "syntax/resolve check the script (-c or file) without running it")
 	flag.StringVar(&args.LogFile, "log-file", "", "append the script's log module output to this file")
 	flag.StringVar(&args.LogFormat, "log-format", "console", "log file format: console (human) or json (machine)")

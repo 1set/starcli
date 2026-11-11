@@ -20,7 +20,7 @@ require (
 	github.com/starpkg/llm v0.1.0
 	github.com/starpkg/markdown v0.1.0
 	github.com/starpkg/qrcode v0.1.0
-	github.com/starpkg/sqlite v0.2.1
+	github.com/starpkg/sqlite v0.2.2-0.20260923164825-56739df72ba2
 	github.com/starpkg/toml v0.1.0
 	github.com/starpkg/totp v0.1.0
 	github.com/starpkg/web v0.1.0
