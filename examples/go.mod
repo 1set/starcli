@@ -1,8 +1,7 @@
-// Separate module on purpose: these build-your-own demos each depend on only the
-// runtime plus the modules they wire (not starcli's full module set), so this is
-// the honest, minimal dependency tree a real shell would have. It also keeps the
-// example mains out of the main module's coverage gate. CI builds it in its own
-// non-gating job. The replace points at the in-repo kit until starcli is tagged.
+// This separate module keeps example mains outside the standard CLI's coverage.
+// CI builds it independently. The local kit replacement uses the parent CLI
+// source, so selected module requirements can include the parent's graph.
+// Each demo registers the runtime modules it chooses.
 module github.com/1set/starcli/examples
 
 go 1.26.0

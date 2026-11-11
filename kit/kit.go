@@ -1,15 +1,13 @@
-// Package kit is the reusable embed→wire→run core of starcli: it turns an
-// embedded Starlark script plus a chosen set of modules and runtime knobs into a
-// ready-to-run starbox runtime.
+// Package kit builds a starbox runtime for embedded Starlark scripts with
+// host-selected modules and runtime options.
 //
-// It is the seam that keeps the whole project consistent. The standard turnkey
-// starcli is one instance of kit wired with every starpkg module; a build-your-
-// own shell is another instance wired with just the few modules it needs. Both
-// go through the same construction path, so they behave identically.
+// The standard CLI and custom shells share this construction path. Matching
+// behavior requires matching modules, options, capability policies, and
+// dependency versions. New starts with an empty module set. WithPolicy installs
+// the host's module policy.
 //
-// kit depends only on starbox (the pure host runtime) and starlet — never on any
-// starpkg module — so a build-your-own shell pulls in only the modules it
-// actually imports and wires itself.
+// A custom shell registers the modules its scripts need. The selected Go module
+// graph can also include requirements of the parent starcli module.
 //
 //	//go:embed app.star
 //	var app string
