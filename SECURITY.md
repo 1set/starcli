@@ -30,6 +30,12 @@ do not provide process or memory isolation. The default `open` tier permits
 network and filesystem access. `--allow-cmd` authorizes arbitrary host commands
 and process environment access, including through `gum` and `runtime`.
 
+SQLite custom functions require `--dangerously-allow-all`. Ordinary module and
+command grants do not enable them. Normal connections exclude process-wide
+callbacks, including ones registered earlier by a trusted box. Fully trusted
+callbacks retain the existing separate-thread behavior and are not bounded by
+`--max-steps`; this is not an isolated-worker or complete resource budget.
+
 Use the narrowest capability grants and import directories that your script
 needs. HTTP execution has request and cooperative execution limits, but these
 do not preempt arbitrary Go builtins or impose a complete output-byte budget.

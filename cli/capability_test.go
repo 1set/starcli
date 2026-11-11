@@ -12,6 +12,7 @@ package cli
 //   - wired pure domain modules are classified pure and pass the safe gate
 //   - cmd execution gating: off by default, on with --allow-cmd /
 //     --dangerously-allow-all (the execCmd lever + end-to-end run())
+//   - SQLite custom functions require the fully trusted-script grant
 
 import (
 	"fmt"
@@ -19,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/1set/starlet"
@@ -439,5 +441,97 @@ func TestProcessCapabilityBoundary(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// SQLite callbacks use their own Starlark threads and process-wide registry.
+// Ordinary module/network/filesystem/command grants must not authorize them.
+var sqlitePolicyFunctionID uint64
+
+func TestSQLiteCustomFunctionPolicy(t *testing.T) {
+	cases := []struct {
+		name    string
+		opts    BoxOpts
+		allowed bool
+	}{
+		{"default open", BoxOpts{}, false},
+		{"explicit open", BoxOpts{caps: "open"}, false},
+		{"full tier", BoxOpts{caps: "full"}, false},
+		{"network and filesystem", BoxOpts{caps: "safe", allowNet: true, allowFS: true}, false},
+		{"command grant", BoxOpts{allowCmd: true}, false},
+		{"fully trusted", BoxOpts{caps: "safe", dangerous: true}, true},
+	}
+	for _, tc := range cases {
+		for _, eager := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/eager=%t", tc.name, eager), func(t *testing.T) {
+				opts := tc.opts
+				checkSQLiteFunctionPolicy(t, &opts, eager, tc.allowed)
+			})
+		}
+	}
+}
+
+func checkSQLiteFunctionPolicy(t *testing.T, opts *BoxOpts, eager, allowed bool) {
+	t.Helper()
+	opts.scenario, opts.printerName = scenarioDirect, "none"
+	opts.moduleToLoad = []string{"sqlite"}
+	box, err := BuildBox(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fn := fmt.Sprintf("starcli_policy_fn_%d", atomic.AddUint64(&sqlitePolicyFunctionID, 1))
+	load, prefix := `load("sqlite", "connect", "register_function")`, ""
+	if eager {
+		load, prefix = "", "sqlite."
+	}
+	code := fmt.Sprintf(`
+%s
+%sregister_function(%q, lambda: 73, num_args=0)
+db = %sconnect(":memory:")
+def verify():
+    if db.query_one("SELECT %s() AS result")["result"] != 73:
+        fail("custom function returned an incorrect value")
+verify()
+db.close()
+`, load, prefix, fn, prefix, fn)
+	_, err = box.Run(code)
+	if allowed {
+		if err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	if err == nil || !strings.Contains(err.Error(), "custom functions are disabled by the host") {
+		t.Fatalf("registration must be rejected by host policy, got %v", err)
+	}
+}
+
+func TestSQLiteRestrictedConnectionIgnoresTrustedFunctions(t *testing.T) {
+	trusted, err := BuildBox(&BoxOpts{scenario: scenarioDirect, printerName: "none", moduleToLoad: []string{"sqlite"}, dangerous: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fn := fmt.Sprintf("starcli_private_fn_%d", atomic.AddUint64(&sqlitePolicyFunctionID, 1))
+	if _, err = trusted.Run(fmt.Sprintf(`load("sqlite", "register_function"); register_function(%q, lambda: 41, num_args=0)`, fn)); err != nil {
+		t.Fatal(err)
+	}
+	restricted, err := BuildBox(&BoxOpts{scenario: scenarioDirect, printerName: "none", moduleToLoad: []string{"sqlite"}, caps: "full"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = restricted.Run(fmt.Sprintf(`load("sqlite", "connect"); db = connect(":memory:"); row = db.query_one("SELECT %s() AS result")`, fn))
+	if err == nil || !strings.Contains(err.Error(), "no such function") {
+		t.Fatalf("restricted connection inherited a process-wide callback: %v", err)
+	}
+	if _, err = restricted.Run(`
+load("sqlite", "connect")
+db = connect(":memory:")
+def verify():
+    if db.query_one("SELECT abs(-73) AS result")["result"] != 73:
+        fail("built-in SQLite functions must remain usable")
+verify()
+db.close()
+`); err != nil {
+		t.Fatalf("ordinary SQL on a restricted connection: %v", err)
 	}
 }

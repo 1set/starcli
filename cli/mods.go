@@ -94,7 +94,12 @@ func loadCLIModuleByName(opts *BoxOpts, name string) (starlet.ModuleLoader, erro
 		}
 		return cmd.NewModule().LoadModule(), nil
 	case sqlite.ModuleName:
-		return sqlite.NewModule().LoadModule(), nil
+		// SQLite callbacks use separate Starlark threads and a process-wide
+		// registry. Only the fully trusted-script grant may enable them; ordinary
+		// SQL and built-in functions remain available under the normal grant.
+		return sqlite.NewModuleWithHostPolicy(sqlite.HostPolicy{
+			DisableCustomFunctions: !opts.dangerous,
+		}).LoadModule(), nil
 	case web.ModuleName:
 		return web.NewModule().LoadModule(), nil
 	case cache.ModuleName:

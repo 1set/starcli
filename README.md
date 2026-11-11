@@ -180,6 +180,14 @@ by a tier, not even `full`. For a one-flag "trust everything" run there is
 command execution of any command in a single switch. Use it only with fully
 trusted scripts.
 
+SQLite's `register_function` is disabled unless the operator passes
+`--dangerously-allow-all`. The `open`/`full` tiers and `--allow-cmd` do not enable
+custom SQL callbacks. Ordinary SQL and built-in functions remain available.
+Restricted connections also exclude callbacks registered earlier by a trusted
+box in the same process. This intentionally tightens the previous default.
+Custom callbacks run outside the Machine's step budget; use the trusted-script
+flag only when that limitation is acceptable.
+
 Set a stricter default for a whole deployment with the env var:
 
 ```bash
@@ -395,7 +403,8 @@ host_name: MyStarCLIServer
 
 ### Prerequisites
 
-- Go 1.25.8 or later (prebuilt binaries do not require a Go installation)
+- Go 1.26.0 or later for source builds and the kit API; production binaries use
+  Go 1.27.4 (prebuilt binaries do not require a Go installation).
 
 ### Building
 
