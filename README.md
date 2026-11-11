@@ -6,6 +6,18 @@ A command-line interface for executing [Starlark](https://github.com/google/star
 
 StarCLI is a versatile tool that provides a convenient environment for running Starlark scripts from the command line. Starlark is a dialect of Python designed for configuration, extensibility, and embedding. StarCLI extends Starlark with additional modules and utilities to make it more powerful for various automation and scripting tasks.
 
+This README describes this source tree. For an installed binary, check
+`starcli --version` and its release's documentation. With Go installed,
+`go version -m /path/to/starcli` shows the modules linked into that binary.
+In a source module, `go list -m all` shows selected versions and replacements;
+it describes that checkout, not an existing binary. Updating a checkout or an
+upstream library does not update installed builds: select the dependency version
+you need and rebuild.
+
+Read the [security policy](SECURITY.md) before choosing capabilities. Scripts and
+loaded source must be selected and reviewed by the host; capability tiers do not
+provide a complete security boundary for arbitrary untrusted source.
+
 ## Features
 
 - **Multiple Execution Modes**:
@@ -375,7 +387,9 @@ StarCLI is the **standard, fully-loaded** build. It is assembled from a small
 reusable core — the [`kit`](kit) package — that you can use to build your **own**
 CLI: a few-line Go shell that embeds your Starlark scripts and wires only the
 modules you need. Your shell and the standard StarCLI construct their runtime
-through the same path, so they behave identically.
+through the same path. Matching behavior requires matching modules, options,
+capability policy, and dependency versions. `kit.New` starts with an empty module
+set and does not install the CLI's capability policy for you.
 
 ```go
 //go:embed app.star

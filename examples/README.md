@@ -3,15 +3,19 @@
 `starcli` is the **standard, fully-loaded** Star\* CLI. But it is built on a small
 reusable core — the [`kit`](../kit) package — that you can use to assemble your
 **own** CLI: a single Go shell that embeds your Starlark scripts and wires only
-the modules you need. The standard `starcli` and your shell construct their
-runtime through exactly the same path, so they behave the same.
+the modules you need. The standard `starcli` and your shell share the runtime
+construction path. Matching behavior requires matching modules, options,
+capability policy, and dependency versions; `kit.New` does not install the CLI's
+capability policy.
 
 > **The idea:** Go is the shell, Starlark is the app. Your `main.go` stays a few
 > lines and never changes; your logic lives in `.star` files you `//go:embed`.
 
-This folder is a **separate Go module** on purpose: each demo depends on only the
-runtime plus the modules it wires, so its `go.mod` is the honest, minimal
-dependency tree a real shell would have.
+This folder is a **separate Go module**, keeping the example mains out of the
+standard CLI's coverage gate. Its `kit` dependency uses this source checkout via
+`replace`. Run `go list -m all` here to inspect selected versions and replacements;
+the graph can still include requirements of the parent CLI module. See the
+[security policy](../SECURITY.md) before exposing scripts or loaders.
 
 ## Run the demos
 
@@ -49,8 +53,10 @@ func main() {
 }
 ```
 
-Its dependency tree is `starbox` + `qrcode` and nothing else — none of the other
-starpkg modules the turnkey `starcli` carries.
+It registers only the `qrcode` domain module, without wiring the other starpkg
+modules that the standard `starcli` carries. The selected module graph can be
+larger than what this shell links; `go version -m /path/to/qrcard` shows its linked
+modules.
 
 ## How modules resolve
 
