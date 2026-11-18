@@ -134,9 +134,9 @@ func TestModuleAllowed(t *testing.T) {
 		{safe, "no-such-module", false}, // unknown -> deny
 
 		// Network tier / --allow-net: pure-network modules yes; fs/cmd no. The
-		// dual-capability modules (web/s3/sqlite) need BOTH net and fs, so a
+		// dual-capability modules need BOTH net and fs, so a
 		// net-only grant does NOT admit them.
-		{network, "http", true}, {network, "email", true}, {network, "llm", true},
+		{network, "http", true}, {network, "email", false}, {network, "llm", false},
 		{network, "web", false}, {network, "sqlite", false},
 		{network, "cmd", false},
 		{allowNet, "web", false}, {allowNet, "file", false},
@@ -147,7 +147,7 @@ func TestModuleAllowed(t *testing.T) {
 		{allowFS, "http", false}, {allowFS, "cmd", false},
 
 		// --allow-net + --allow-fs (or --caps full): the dual modules load.
-		{netFS, "web", true}, {netFS, "sqlite", true},
+		{netFS, "web", true}, {netFS, "sqlite", true}, {netFS, "email", true}, {netFS, "llm", true},
 		{netFS, "cmd", false}, // still no exec
 
 		// Full: net + fs, but cmd still requires --allow-cmd.
@@ -233,6 +233,10 @@ func TestProcess_CapabilityGate_EndToEnd(t *testing.T) {
 		{"safe denies web", nil, `load("web", "get")`, false, "web"},
 		{"safe denies cmd", nil, `load("cmd", "run")`, false, "cmd"},
 		{"allow-net opens http", func(a *Args) { a.AllowNet = true }, `load("http", "get"); print(type(get))`, true, ""},
+		{"network withholds file-reading email", func(a *Args) { a.Caps = "network" }, `load("email", "send")`, false, "email"},
+		{"network withholds file-reading llm", func(a *Args) { a.Caps = "network" }, `load("llm", "chat")`, false, "llm"},
+		{"network and filesystem opens email", func(a *Args) { a.Caps = "network"; a.AllowFS = true }, `load("email", "send"); print(type(send))`, true, ""},
+		{"network and filesystem opens llm", func(a *Args) { a.Caps = "network"; a.AllowFS = true }, `load("llm", "chat"); print(type(chat))`, true, ""},
 		{"allow-cmd opens cmd", func(a *Args) { a.AllowCmd = true }, `load("cmd", "run"); print(type(run))`, true, ""},
 		{"full keeps cmd denied", func(a *Args) { a.Caps = "full" }, `load("cmd", "run")`, false, "cmd"},
 	}

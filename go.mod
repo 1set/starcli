@@ -4,27 +4,27 @@ go 1.26.0
 
 require (
 	bitbucket.org/ai69/colorlogo v0.1.3
-	github.com/1set/starbox v0.2.0
-	github.com/1set/starlet v0.2.3
+	github.com/1set/starbox v0.2.1
+	github.com/1set/starlet v0.2.5
 	github.com/chzyer/readline v1.5.1
 	github.com/kyokomi/emoji/v2 v2.2.13
 	github.com/samber/lo v1.50.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
-	github.com/starpkg/cache v0.1.0
-	github.com/starpkg/cmd v0.1.1
-	github.com/starpkg/email v0.1.0
-	github.com/starpkg/emoji v0.1.0
-	github.com/starpkg/gum v0.2.0
-	github.com/starpkg/liquid v0.1.0
-	github.com/starpkg/llm v0.1.0
-	github.com/starpkg/markdown v0.1.0
-	github.com/starpkg/qrcode v0.1.0
-	github.com/starpkg/sqlite v0.2.2-0.20260923164825-56739df72ba2
-	github.com/starpkg/toml v0.1.0
-	github.com/starpkg/totp v0.1.0
-	github.com/starpkg/web v0.1.0
-	github.com/starpkg/yaml v0.1.0
+	github.com/starpkg/cache v0.1.1
+	github.com/starpkg/cmd v0.1.2
+	github.com/starpkg/email v0.1.1
+	github.com/starpkg/emoji v0.1.1
+	github.com/starpkg/gum v0.2.1
+	github.com/starpkg/liquid v0.1.1
+	github.com/starpkg/llm v0.1.1
+	github.com/starpkg/markdown v0.1.1
+	github.com/starpkg/qrcode v0.1.1
+	github.com/starpkg/sqlite v0.2.2
+	github.com/starpkg/toml v0.1.1
+	github.com/starpkg/totp v0.1.1
+	github.com/starpkg/web v0.1.1
+	github.com/starpkg/yaml v0.1.1
 	go.starlark.net v0.0.0-20260324133313-ffb3f39dd27a
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
@@ -40,7 +40,7 @@ require (
 	charm.land/huh/v2 v2.0.3 // indirect
 	charm.land/lipgloss/v2 v2.0.4 // indirect
 	github.com/1set/gut v0.0.0-20201117175203-a82363231997 // indirect
-	github.com/1set/starlight v0.2.1 // indirect
+	github.com/1set/starlight v0.2.3 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
@@ -109,7 +109,7 @@ require (
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spyzhov/ajson v0.9.6 // indirect
-	github.com/starpkg/base v0.1.3 // indirect
+	github.com/starpkg/base v0.1.4 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tursodatabase/libsql-client-go v0.0.0-20260528064733-9d5d30a29a60 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect

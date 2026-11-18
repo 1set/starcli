@@ -146,7 +146,7 @@ func WithLogger(l *zap.SugaredLogger) Option {
 }
 
 // WithPrintFunc overrides how the script's print() output is rendered. Without
-// it, starbox's default (stdout) is used.
+// it, starbox's default timestamped stderr printer is used.
 func WithPrintFunc(pf starlet.PrintFunc) Option {
 	return func(k *Kit) { k.printFunc = pf }
 }

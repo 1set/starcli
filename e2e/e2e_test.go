@@ -135,6 +135,12 @@ func TestGolden(t *testing.T) {
 		{name: "allow-cmd runs a command", args: []string{"--allow-cmd", "-c", `load("cmd","run"); print(run("go version").success)`}, wantOut: "True\n", wantExit: 0},
 		// capability gate:
 		{name: "caps safe withholds http", args: []string{"--caps", "safe", "-c", `load("http","get")`}, wantExit: anyNonZero, errSub: "withheld"},
+		{name: "network withholds email file access", args: []string{"--caps", "network", "-c", `load("email","send")`}, wantExit: anyNonZero, errSub: "email"},
+		{name: "network withholds llm file access", args: []string{"--caps", "network", "-c", `load("llm","chat")`}, wantExit: anyNonZero, errSub: "llm"},
+		{name: "network withholds preloaded email", args: []string{"--caps", "network", "-c", `print(email.send)`}, wantExit: anyNonZero, errSub: "email"},
+		{name: "network withholds preloaded llm", args: []string{"--caps", "network", "-c", `print(llm.chat)`}, wantExit: anyNonZero, errSub: "llm"},
+		{name: "network and filesystem allow email", args: []string{"--caps", "network", "--allow-fs", "-c", `load("email","send"); print(True)`}, wantOut: "True\n", wantExit: 0},
+		{name: "network and filesystem allow llm", args: []string{"--caps", "network", "--allow-fs", "-c", `load("llm","chat"); print(True)`}, wantOut: "True\n", wantExit: 0},
 		// --check validates without running:
 		{name: "check valid does not run", args: []string{"--check", "-c", `print("RAN")`}, notOut: "RAN", wantExit: 0},
 		{name: "check invalid is non-zero", args: []string{"--check", "-c", `x =`}, wantExit: anyNonZero},

@@ -30,6 +30,12 @@ do not provide process or memory isolation. The default `open` tier permits
 network and filesystem access. `--allow-cmd` authorizes arbitrary host commands
 and process environment access, including through `gum` and `runtime`.
 
+Modules are classified by all operations they expose. `email` attachments and
+`llm` image files read host files, so these modules require both network and
+filesystem grants, just like `web` and `sqlite`. A network-only grant, including
+an explicit script import directory, cannot load or preload them. Use
+`--caps network --allow-fs` only when both capabilities are intended.
+
 SQLite custom functions require `--dangerously-allow-all`. Ordinary module and
 command grants do not enable them. Normal connections exclude process-wide
 callbacks, including ones registered earlier by a trusted box. Fully trusted
@@ -55,8 +61,8 @@ results, and errors. Control their access and retention at the host level.
 
 ## Optional dependency packages
 
-`golang.org/x/crypto v0.55.0` preserves the existing Go 1.25.8 source-build
-floor. The CLI uses its SHA-3 package through request validation. SSH and
+The crypto dependency and Go compatibility floor are pinned in `go.mod`.
+The CLI uses SHA-3 through request validation. SSH and
 OpenPGP are outside the build and test dependency graph; their known advisories
 remain in the module and are not described as fixed. CI rejects importing
 those packages without another dependency and compatibility review. Final

@@ -8,13 +8,13 @@ go 1.26.0
 
 require (
 	github.com/1set/starcli v0.0.0
-	github.com/starpkg/qrcode v0.1.0
+	github.com/starpkg/qrcode v0.1.1
 )
 
 require (
-	github.com/1set/starbox v0.2.0 // indirect
-	github.com/1set/starlet v0.2.3 // indirect
-	github.com/1set/starlight v0.2.1 // indirect
+	github.com/1set/starbox v0.2.1 // indirect
+	github.com/1set/starlet v0.2.5 // indirect
+	github.com/1set/starlight v0.2.3 // indirect
 	github.com/boombuler/barcode v1.1.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -23,7 +23,7 @@ require (
 	github.com/psanford/memfs v0.0.0-20230130182539-4dbf7e3e865e // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/spyzhov/ajson v0.9.6 // indirect
-	github.com/starpkg/base v0.1.3 // indirect
+	github.com/starpkg/base v0.1.4 // indirect
 	go.starlark.net v0.0.0-20260324133313-ffb3f39dd27a // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect

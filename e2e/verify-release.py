@@ -2,6 +2,7 @@
 """Verify real release archives, then rehearse install, upgrade, and rollback.
 
 Usage: python3 e2e/verify-release.py DIST VERSION PREVIOUS_DIST PREVIOUS_VERSION
+       python3 e2e/verify-release.py --scan-binaries DIST VERSION
 Only a temporary installation directory is changed. No system install or
 release publication occurs. Run from the repository root with Go on PATH.
 """
@@ -32,7 +33,7 @@ def native_target():
     return system, arch
 
 
-def verify_archives(directory, version, *, native_only=False):
+def verify_archives(directory, version, *, native_only=False, binary_verifier=None, release_assets_only=False):
     """Pin the complete archive/checksum/member contract for all six targets."""
     if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?", version):
         raise ValueError(f"invalid version: {version!r}")
@@ -51,6 +52,10 @@ def verify_archives(directory, version, *, native_only=False):
     target = native_target()
     archives = {name for name, value in expected.items() if not native_only or value == target}
     actual = {p.name for p in directory.iterdir() if p.is_file()}
+    if release_assets_only:
+        # Match upload-artifact's selectors in the full GoReleaser directory;
+        # metadata/config/build outputs are not release assets.
+        actual = {name for name in actual if name == "checksums.txt" or name.endswith((".tar.gz", ".zip"))}
     if actual != archives | {"checksums.txt"}:
         raise ValueError(f"unexpected or missing distribution files: {actual ^ (archives | {'checksums.txt'})}")
     native_binary = None
@@ -81,12 +86,33 @@ def verify_archives(directory, version, *, native_only=False):
             required_members.remove("SECURITY.md")
         if members.keys() != required_members or not all(members.values()):
             raise ValueError(f"archive must contain exactly {sorted(required_members)}: {name}")
+        if binary_verifier is not None:
+            binary_verifier(name, binary, members[binary])
         if (system, arch) == target:
             native_binary = members[binary]
         print(f"verified {name}", flush=True)
     if native_binary is None:
         raise ValueError(f"missing native binary: {target}")
     return native_binary
+
+
+def scan_archives(directory, version):
+    """Scan the exact checksum-verified binary bytes without executing them."""
+    with tempfile.TemporaryDirectory(prefix="starcli binary scan ") as temp:
+        binaries = []
+
+        def retain(archive, binary, data):
+            path = Path(temp) / archive / binary
+            path.parent.mkdir()
+            path.write_bytes(data)
+            binaries.append(path)
+
+        verify_archives(directory, version, binary_verifier=retain, release_assets_only=True)
+        for path in binaries:
+            subprocess.run(
+                ["go", "run", "golang.org/x/vuln/cmd/govulncheck@v1.8.0",
+                 "-mode=binary", str(path)], check=True, timeout=180,
+            )
 
 
 def run(binary, *args, expected_stdout=None, success=True):
@@ -187,6 +213,9 @@ def verify_terminal_recording(binary, directory):
 
 
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--scan-binaries":
+        scan_archives(Path(sys.argv[2]), sys.argv[3])
+        return
     directory, version, previous, previous_version = sys.argv[1:]
     candidate = verify_archives(Path(directory), version)
     baseline = verify_archives(Path(previous), previous_version, native_only=True)

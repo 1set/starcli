@@ -73,7 +73,8 @@ above. To roll back, stop those processes and restore the saved binary. This
 rehearses binary replacement; backing up script-owned files or databases is the
 host application's responsibility.
 
-The release workflow verifies all six archive layouts and checksums, then runs
+The release workflow scans source and all six checksum-verified packaged binaries
+with the pinned vulnerability scanner. It verifies archive layouts, then runs
 installation, upgrade from v0.1.2, the CLI end-to-end suite, and binary rollback
 on all six native targets. It publishes those same archives after the checks
 pass and adds GitHub artifact attestations. For releases produced by this
@@ -133,8 +134,8 @@ its default entrypoint. Override `--entrypoint` explicitly if you need a shell.
 $ ./starcli -h
 Usage of ./starcli:
       --allow-cmd               allow ANY host command, gum subprocesses, and runtime environment mutation (trusted scripts only)
-      --allow-fs                widen a restrictive tier with filesystem modules (file, path)
-      --allow-net               widen a restrictive tier with network modules (http, net, email, llm)
+      --allow-fs                widen a restrictive tier with filesystem capability
+      --allow-net               widen a restrictive tier with network capability
       --caps string             capability tier: open (default net/fs) | full | network | safe; or env STAR_CAPS
       --check                   syntax/resolve check the script (-c or file) without running it
   -c, --code string             Starlark code to execute
@@ -166,14 +167,20 @@ Choose the capabilities needed by host-selected scripts with `--caps` (or the
 |---|---|
 | _(default)_ `open` | network **and** filesystem; `cmd` loads with execution disabled; `gum` and `runtime` require `--allow-cmd` |
 | `--caps full` | network **and** filesystem; `cmd`, `gum`, and `runtime` require `--allow-cmd` |
-| `--caps network` | safe **+** network (`http`, `net`, `email`, `llm`) |
+| `--caps network` | safe **+** network-only modules (`http`, `net`) |
 | `--caps safe` | pure / log / process only (`math`, `json`, `sys`, `markdown`, …) |
 
 From a restrictive tier the granular flags widen the grant: `--allow-net`,
 `--allow-fs`, and `--allow-cmd`. A module is classified by the **union** of
-everything it can do, so the dual-capability modules — `web` (HTTP **+**
-`static_dir`) and `sqlite` (DB **+** remote `connect_remote`) — need **both**
-`--allow-net` and `--allow-fs` (or `--caps full`).
+everything it can do. `email` (API **+** `attachment_file`), `llm` (API **+**
+`image_file`), `web` (HTTP **+** static files), and `sqlite` (DB **+** remote
+connections) need **both** network and filesystem grants. Use
+`--caps network --allow-fs`, `--caps safe --allow-net --allow-fs`, or
+`--caps full`. The default `open` tier already grants both.
+
+In v0.1.3, `email` and `llm` no longer load under a network-only grant: their
+local-file inputs require explicit filesystem permission. This also applies to
+preloaded module globals. An explicit `-I` import directory does not grant it.
 
 Local script imports follow a separate directory grant. The default open/full
 posture and `--allow-fs` include the working directory. `--caps safe` and
