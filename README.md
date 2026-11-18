@@ -48,10 +48,14 @@ provide a complete security boundary for arbitrary untrusted source.
 ### Prebuilt archives
 
 Download the archive for your system and `checksums.txt` from the same
-[GitHub Release](https://github.com/1set/starcli/releases). No Go installation is
-needed to run a release binary. Starting with v0.1.3, each archive includes the README, license, and
+[v0.1.4 GitHub Release](https://github.com/1set/starcli/releases/tag/v0.1.4).
+No Go installation is needed to run a release binary. Starting with v0.1.4,
+each archive includes the README, license, and
 [security policy](SECURITY.md), including the supported execution boundary and
 private vulnerability reporting instructions.
+
+`v0.1.3` is a source-only tag: its release job stopped before building archives.
+Use `v0.1.4` for this packaged release.
 
 | System | Architecture | Archive suffix |
 |---|---|---|
@@ -83,6 +87,9 @@ Older releases may not include attestations. Binaries are not Apple notarized
 or Windows Authenticode signed.
 
 ### From Source
+
+With Go 1.26.0 or newer, install this version with
+`go install github.com/1set/starcli@v0.1.4`.
 
 Clone the repository and build from source:
 
@@ -178,8 +185,8 @@ connections) need **both** network and filesystem grants. Use
 `--caps network --allow-fs`, `--caps safe --allow-net --allow-fs`, or
 `--caps full`. The default `open` tier already grants both.
 
-In v0.1.3, `email` and `llm` no longer load under a network-only grant: their
-local-file inputs require explicit filesystem permission. This also applies to
+In the v0.1.4 packages, `email` and `llm` no longer load under a network-only
+grant: their local-file inputs require explicit filesystem permission. This also applies to
 preloaded module globals. An explicit `-I` import directory does not grant it.
 
 Local script imports follow a separate directory grant. The default open/full
