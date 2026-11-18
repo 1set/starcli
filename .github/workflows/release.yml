@@ -55,6 +55,12 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               print('version=' + version, file=output)
           PY
+      - name: Test archive verification
+        run: python3 -m unittest discover -s e2e -p 'test_verify_release.py'
+      - name: Check packaged binary vulnerabilities
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: python3 e2e/verify-release.py --scan-binaries dist "$RELEASE_VERSION"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-archives

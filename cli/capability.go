@@ -27,7 +27,7 @@ const modCmd = "cmd"
 // absent here falls back to starlet.GetBuiltinModuleCapability.
 // A module's capability is the UNION of every builtin it exposes — a module is
 // as privileged as its sharpest tool. gum/runtime additionally require execCmd.
-// sqlite/web are dual-capability and so
+// email/llm/sqlite/web are dual-capability and so
 // require BOTH grants (or --caps full): they each cross the net<->fs line.
 var starpkgCaps = map[string]starlet.ModuleCapability{
 	"args":     starlet.CapPure,                            // argparse-style parsing of the captured argv
@@ -41,8 +41,8 @@ var starpkgCaps = map[string]starlet.ModuleCapability{
 	"yaml":     starlet.CapPure,                            // YAML decode/encode
 	"sys":      starlet.CapProcess,                         // argv/platform/host + stdin
 	"gum":      starlet.CapProcess,                         // interactive terminal I/O
-	"email":    starlet.CapNetwork,                         // Resend API
-	"llm":      starlet.CapNetwork,                         // OpenAI-compatible API
+	"email":    starlet.CapNetwork | starlet.CapFileSystem, // Resend API + attachment_file
+	"llm":      starlet.CapNetwork | starlet.CapFileSystem, // OpenAI-compatible API + image_file
 	"web":      starlet.CapNetwork | starlet.CapFileSystem, // HTTP client + static_dir (serves a local dir)
 	"sqlite":   starlet.CapFileSystem | starlet.CapNetwork, // local DB files + connect_remote (libsql/Turso over the network)
 	modCmd:     starlet.CapProcess,                         // classified, but gated by allowCmd — see capGrant.moduleAllowed
