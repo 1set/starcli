@@ -45,6 +45,20 @@ provide a complete security boundary for arbitrary untrusted source.
 
 ## Installation
 
+### Homebrew (macOS and Linux)
+
+Install the latest release from the `1set/tap` tap:
+
+```bash
+brew install 1set/tap/starcli
+starcli --version
+starcli -c 'print(6 * 7)'
+```
+
+To upgrade an existing installation, run `brew update` followed by
+`brew upgrade starcli`. Homebrew provides prebuilt binaries for macOS and Linux
+on Intel and ARM. Windows users can install from the prebuilt archives below.
+
 ### Prebuilt archives
 
 Download the archive for your system and `checksums.txt` from the same
